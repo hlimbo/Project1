@@ -24,12 +24,14 @@ class WriteException (Exception):
 # creditcards -> creditcards
 
 #schema = {tableName : [columnName]}
-schema = {"Games" : ["id","Rank","Name","Platform","Year","NA_Sales","EU_Sales","JP_Sales","Other_Sales","Global_Sales"], 
+schema = {"Games" : ["id","Rank","Name","Year","NA_Sales","EU_Sales","JP_Sales","Other_Sales","Global_Sales"], 
         "Genres" : ["id","Genre"],
         "GenresOfGames" : ["Games","Genres"],
         "Publishers" : ["id","Publisher"],
-        "PublishersOfGames" : ["Games","Publishers"]}
-dupCheck=['Genre','Publisher']
+        "PublishersOfGames" : ["Games","Publishers"],
+        "Platforms" : ["id","Platform"],
+        "PlatformsOfGames" : ["Games","Platforms"]}
+dupCheck=['Genre','Publisher',"Platform"]
 additionalInfo=[('Games','id')]
 uniques = {}
 for table in dupCheck:
