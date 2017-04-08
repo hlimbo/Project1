@@ -6,6 +6,9 @@ import sys
 class ConvertException (Exception):
     pass
 
+class WriteException (Exception):
+    pass
+
 #For now, schema is tuned by hand inside this file
 
 #movie to game db translation
@@ -21,7 +24,6 @@ class ConvertException (Exception):
 # creditcards -> creditcards
 
 #schema = {tableName : [columnName]}
-#schema = {"Games" : ["Rank","Name","Platform","Year","Genre","Publisher","NA_Sales","EU_Sales","JP_Sales","Other_Sales","Global_Sales"]}
 schema = {"Games" : ["id","Rank","Name","Platform","Year","NA_Sales","EU_Sales","JP_Sales","Other_Sales","Global_Sales"], 
         "Genres" : ["id","Genre"],
         "GenresOfGames" : ["Games","Genres"],
@@ -62,15 +64,19 @@ types = {}
 for value in order:
     types[value[1]]="str"
 types["Rank"]="int"
-types["Year"]="date"
+types["Year"]="year"
+types["id"]="int"
+for table in references:
+    for i in range(0,len(schema[table])):
+        types[references[table][i][:-1]+"_id"]="int"
 
 def insertHeader (inserts,insertCounts,tableName,insertID=True):
-    inserts[tableName]="INSERT INTO '"+tableName+"'\n   ("
+    inserts[tableName]="INSERT INTO "+tableName+"\n   ("
     #put all but last value of table schema into insert statement
     for column in schema[tableName][:-1]:
-        inserts[tableName]+="'"+column+"', "
+        inserts[tableName]+=column+", "
     #insert last column without a comma after it
-    inserts[tableName]+="'"+schema[tableName][-1]+"') VALUES \n   ("
+    inserts[tableName]+=schema[tableName][-1]+") VALUES \n   ("
     if insertID:
         inserts[tableName]+=str(counts[tableName])+", "
         insertCounts[tableName]=1
@@ -93,6 +99,12 @@ def convert (csvFileName, newSqlFileName, skipFirstLine=False):
             #write insert statement by table instead of csv order
             inserts = {}
             insertCounts = {}
+            #skip lines with null data
+            if line.find("N/A") != -1:
+                continue
+            line=line.replace("'","\\'")
+            #replace non-ASCII characters
+            line=line.encode("ascii",'replace').decode("ascii")
             quote = line.find("\"")
             #remove commas within quotes
             while quote!= -1:
@@ -103,6 +115,8 @@ def convert (csvFileName, newSqlFileName, skipFirstLine=False):
                 quote=line.find("\"")
             assert (line.find("\"")==-1)
             for value in line.split(","):
+                #replace semicolons with colons so file can be post processed
+                value=value.replace(";",",")
                 checkForDuplicates=False
                 fieldType = types[order[i][1]]
                 if order[i][1] in dupCheck:
@@ -131,9 +145,9 @@ def convert (csvFileName, newSqlFileName, skipFirstLine=False):
                 elif fieldType == "int":
                     inserts[order[i][0]]+=value.strip()
                     fields[order[i]]=value.strip()
-                elif fieldType == "date":
-                    inserts[order[i][0]]+="Date('"+value.strip()+"')"
-                    fields[order[i]]="Date('"+value.strip()+"')"
+                elif fieldType == "year":
+                    inserts[order[i][0]]+=value.strip()
+                    fields[order[i]]=value.strip()
                 else:
                     raise ConvertException("Unknown type "+fieldType)
                 if checkForDuplicates:
@@ -153,7 +167,6 @@ def convert (csvFileName, newSqlFileName, skipFirstLine=False):
                 if i%len(order) == 0:
                     i=0
             #handle relationships now that entities are assumed to be processed
-            print(fields)
             for child,parents in references.items():
                 for parent in parents:
                     for column in schema[parent]:
@@ -192,6 +205,20 @@ def convert (csvFileName, newSqlFileName, skipFirstLine=False):
                     +" doesn't match with count "+str(count))
     return
 
+def writeCreateType (sqlFile,colType):
+    if colType =="str":
+        sqlFile.write("VARCHAR(200)")
+    elif colType == "int":
+        sqlFile.write("INTEGER")
+    elif colType == "year":
+        sqlFile.write("YEAR")
+    else:
+        raise WriteException("Unknown type "+colType)
+
+def writeColumn (sqlFile,col):
+    sql.write(col+" ")
+    writeCreateType(sql,types[col])
+
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         print("Which csv file you wish to convert?")
@@ -204,6 +231,69 @@ if __name__ == "__main__":
             convert(sys.argv[1],sys.argv[2], True)
         else:
             convert(sys.argv[1],sys.argv[2])
+        #post process sql file to combine insertions for a table
+        #into one insertion statement to make running the sql file faster
+        with open(sys.argv[2],"r") as sql, open("_new_"+sys.argv[2],"w") as newSql:
+            statement = ""
+            values={}
+            columns={}
+            for table in schema:
+                values[table]=[]
+                columns[table]=[]
+            for line in sql:
+                statement+=line
+                if line.find(";") != -1:
+                    statementPrefix="INSERT INTO "
+                    assert(statement.find(statementPrefix) != -1)
+                    start=statement.find(statementPrefix)+len(statementPrefix)
+                    table = statement[start:statement[start:].find(" ")+start].strip()
+                    columnStart = statement.find(table)+len(table)
+                    statementValues = "VALUES"
+                    assert(statement.find(statementValues) != -1)
+                    columns[table] = statement[columnStart:statement.find(statementValues)].strip()
+                    valueStart = statement.find(statementValues)+len(statementValues)
+                    values[table].append(statement[valueStart:statement.find(";")].strip())
+                    statement=""
+            for table in schema:
+                newSql.write("INSERT INTO "+table+
+                        "\n   "+columns[table]+" VALUES\n   ")
+                for value in values[table][:-1]:
+                    newSql.write(value+",\n   ")
+                newSql.write(values[table][-1]+";\n\n")
+        #replace file with optimized version
+        os.rename("_new_"+sys.argv[2],sys.argv[2])
         #write createtable script 
+        with open("create_"+sys.argv[2],"w") as sql:
+            #for entity tables
+            for table in schema:
+                if table not in references:
+                    sql.write("CREATE TABLE "+table+" (\n   ")
+                    #create key field
+                    writeColumn(sql,schema[table][0])
+                    #sql.write(" PRIMARY KEY NOT NULL AUTO_INCREMENT,\n   ")
+                    sql.write(" PRIMARY KEY NOT NULL,\n   ")
+                    for column in schema[table][1:-1]:
+                        writeColumn(sql,column)
+                        sql.write(",\n   ")
+                    writeColumn(sql,schema[table][-1])
+                    sql.write("\n);\n\n")
+            #for relationship tables
+            for table in schema:
+                if table in references:
+                    sql.write("CREATE TABLE "+table+" (\n   ")
+                    #write values first
+                    writeColumn(sql,schema[table][0])
+                    sql.write(" NOT NULL")
+                    for column in schema[table][1:]:
+                        sql.write(",\n   ");
+                        writeColumn(sql,column)
+                        sql.write(" NOT NULL")
+                    #now write foreign key constraints
+                    #for column in schema[table]:
+                    #    parent = column[:-3]+"s"
+                    #    sql.write(",\n   CONSTRAINT "+"fk_"+table+"_"+parent+" FOREIGN KEY (`"+column+"`) REFERENCES `"+parent+"`(id) ON DELETE CASCADE")
+                    #    #sql.write(",\n   FOREIGN KEY (`"+column+"`) REFERENCES `"+parent)
+                    sql.write("\n);\n\n")
+                    #sql.write("\n) ENGINE=InnoDB DEFAULT CHARSET=latin1;\n\n")
     except ConvertException as e:
         print(e)
