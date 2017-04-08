@@ -47,14 +47,15 @@ order= list(map (lambda column : (findTable(column),column),
 
 #references are tables that are related to each other
 references = {}
-#dependents = {}
 for foreignKey in schema:
     for table, columns in schema.items():
         if foreignKey in columns:
             if table not in references:
                 references[table]=[]
             references[table].append(foreignKey)
-            #dependents[foreignKey]=table
+for table in references:
+    for i in range(0,len(schema[table])):
+        schema[table][i]=references[table][i][:-1]+"_id"
 #types = {columnName : columnType}
 #most values are string type, so set all to that
 types = {}
@@ -203,5 +204,6 @@ if __name__ == "__main__":
             convert(sys.argv[1],sys.argv[2], True)
         else:
             convert(sys.argv[1],sys.argv[2])
+        #write createtable script 
     except ConvertException as e:
         print(e)
