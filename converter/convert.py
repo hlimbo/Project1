@@ -221,6 +221,13 @@ def writeColumn (sqlFile,col):
     sql.write(col+" ")
     writeCreateType(sql,types[col])
 
+def writeInsert (sqlFile,columns,values,tableName):
+    newSql.write("INSERT INTO "+tableName+
+            "\n   "+columns[tableName]+" VALUES\n   ")
+    for value in values[tableName][:-1]:
+        newSql.write(value+",\n   ")
+    newSql.write(values[tableName][-1]+";\n\n")
+
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         print("Which csv file you wish to convert?")
@@ -256,12 +263,14 @@ if __name__ == "__main__":
                     valueStart = statement.find(statementValues)+len(statementValues)
                     values[table].append(statement[valueStart:statement.find(";")].strip())
                     statement=""
+            #handle entities first
             for table in schema:
-                newSql.write("INSERT INTO "+table+
-                        "\n   "+columns[table]+" VALUES\n   ")
-                for value in values[table][:-1]:
-                    newSql.write(value+",\n   ")
-                newSql.write(values[table][-1]+";\n\n")
+                if table not in references:
+                    writeInsert(newSql,columns,values,table)
+            #handle relationships now
+            for table in schema:
+                if table in references:
+                    writeInsert(newSql,columns,values,table)
         #replace file with optimized version
         os.rename("_new_"+sys.argv[2],sys.argv[2])
         #write createtable script 
@@ -290,10 +299,10 @@ if __name__ == "__main__":
                         writeColumn(sql,column)
                         sql.write(" NOT NULL")
                     #now write foreign key constraints
-                    #for column in schema[table]:
-                    #    parent = column[:-3]+"s"
-                    #    sql.write(",\n   CONSTRAINT "+"fk_"+table+"_"+parent+" FOREIGN KEY (`"+column+"`) REFERENCES `"+parent+"`(id) ON DELETE CASCADE")
-                    #    #sql.write(",\n   FOREIGN KEY (`"+column+"`) REFERENCES `"+parent)
+                    for column in schema[table]:
+                        parent = column[:-3]+"s"
+                        sql.write(",\n   CONSTRAINT "+"fk_"+table+"_"+parent+" FOREIGN KEY (`"+column+"`) REFERENCES `"+parent+"`(id) ON DELETE CASCADE")
+                        #sql.write(",\n   FOREIGN KEY (`"+column+"`) REFERENCES `"+parent)
                     sql.write("\n);\n\n")
                     #sql.write("\n) ENGINE=InnoDB DEFAULT CHARSET=latin1;\n\n")
     except ConvertException as e:
