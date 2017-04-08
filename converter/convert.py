@@ -36,7 +36,7 @@ for table in dupCheck:
     uniques[table] = {}
 counts = {}
 for table in schema:
-    counts[table]=0
+    counts[table]=1
 def findTable (column):
     for table, columns in schema.items():
         if column in columns:
@@ -270,8 +270,7 @@ if __name__ == "__main__":
                     sql.write("CREATE TABLE "+table+" (\n   ")
                     #create key field
                     writeColumn(sql,schema[table][0])
-                    #sql.write(" PRIMARY KEY NOT NULL AUTO_INCREMENT,\n   ")
-                    sql.write(" PRIMARY KEY NOT NULL,\n   ")
+                    sql.write(" PRIMARY KEY NOT NULL AUTO_INCREMENT,\n   ")
                     for column in schema[table][1:-1]:
                         writeColumn(sql,column)
                         sql.write(",\n   ")

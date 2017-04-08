@@ -1,5 +1,15 @@
+CREATE TABLE Publishers (
+   id INTEGER PRIMARY KEY NOT NULL AUTO_INCREMENT,
+   Publisher VARCHAR(200)
+);
+
+CREATE TABLE Genres (
+   id INTEGER PRIMARY KEY NOT NULL AUTO_INCREMENT,
+   Genre VARCHAR(200)
+);
+
 CREATE TABLE Games (
-   id INTEGER PRIMARY KEY NOT NULL,
+   id INTEGER PRIMARY KEY NOT NULL AUTO_INCREMENT,
    Rank INTEGER,
    Name VARCHAR(200),
    Platform VARCHAR(200),
@@ -11,23 +21,13 @@ CREATE TABLE Games (
    Global_Sales VARCHAR(200)
 );
 
-CREATE TABLE Publishers (
-   id INTEGER PRIMARY KEY NOT NULL,
-   Publisher VARCHAR(200)
-);
-
-CREATE TABLE Genres (
-   id INTEGER PRIMARY KEY NOT NULL,
-   Genre VARCHAR(200)
+CREATE TABLE PublishersOfGames (
+   Publisher_id INTEGER NOT NULL,
+   Game_id INTEGER NOT NULL
 );
 
 CREATE TABLE GenresOfGames (
-   Game_id INTEGER NOT NULL,
-   Genre_id INTEGER NOT NULL
-);
-
-CREATE TABLE PublishersOfGames (
-   Game_id INTEGER NOT NULL,
-   Publisher_id INTEGER NOT NULL
+   Genre_id INTEGER NOT NULL,
+   Game_id INTEGER NOT NULL
 );
 
