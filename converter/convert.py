@@ -2,6 +2,35 @@
 #Developed in python version 3.5.3
 import os
 import sys
+import string
+import random
+#import statements after this point are dependencies
+#forgery_py under an MIT license, used to generate 
+# names, addresses, emails, and dates
+import forgery_py
+
+random.seed()
+
+def generateEmail ():
+    return forgery_py.internet.email_address(forgery_py.internet.domain_name())
+
+def generateExpDate ():
+    #up to 10 years
+    return forgery_py.date.date(max_delta=3560)
+
+def generateAddress ():
+    forge = forgery_py.address
+    return (forge.street_address()+", "+forge.city()+", "+
+            forge.state_abbrev()+" "+forge.zip_code())
+
+def generatePassword ():
+    password=""
+    allowed = string.ascii_letters+string.digits
+    #allowed = (string.ascii_letters+string.digits+
+    #    string.punctuation.replace("-","").replace("'","").replace("\"","")).replace("\\","")
+    for i in range(0,20):
+        password+=allowed[random.randint(0,len(allowed)-1)]
+    return password
 
 class ConvertException (Exception):
     pass
@@ -18,27 +47,30 @@ class WriteException (Exception):
 # stars_in_movies -> publishers_of_games
 # genres -> genres
 # genres_in_movies -> genres_of_games
+# ? -> platforms  #fewer platforms than there are publishers. 30 versus 500
+# ? -> platforms_of_games
 #Random generation part
 # customers -> customers
 # sales -> sales
 # creditcards -> creditcards
 
 #schema = {tableName : [columnName]}
-schema = {"Games" : ["id","Rank","Name","Year","NA_Sales","EU_Sales","JP_Sales","Other_Sales","Global_Sales"], 
-        "Genres" : ["id","Genre"],
-        "GenresOfGames" : ["Games","Genres"],
-        "Publishers" : ["id","Publisher"],
-        "PublishersOfGames" : ["Games","Publishers"],
-        "Platforms" : ["id","Platform"],
-        "PlatformsOfGames" : ["Games","Platforms"]}
-dupCheck=['Genre','Publisher',"Platform"]
-additionalInfo=[('Games','id')]
-uniques = {}
-for table in dupCheck:
-    uniques[table] = {}
-counts = {}
-for table in schema:
-    counts[table]=1
+schema = {"games" : ["id","rank","name","year","globalsales"], 
+        "genres" : ["id","genre"],
+        "genres_of_games" : ["games","genres"],
+        "publishers" : ["id","publisher"],
+        "publishers_of_games" : ["games","publishers"],
+        "platforms" : ["id","platform"],
+        "platforms_of_games" : ["games","platforms"],
+        "creditcards" : ["id", "first_name", "last_name", "expiration"],
+        "customers" : ["id", "cc_id", "first_name", "last_name",
+            "address", "email", "password"],
+        "sales" : ["id","customer_id","salesdate","games"]}
+additionalDependency={("customers","cc_id") : "creditcards"}
+dupCheck=['genre','publisher',"platform"]
+ignore=['NA_Sales','EU_Sales','JP_Sales','Other_Sales']
+#additionalInfo is field values that need to be tracked for dependencies
+additionalInfo=[('games','id')]
 def findTable (column):
     for table, columns in schema.items():
         if column in columns:
@@ -46,8 +78,8 @@ def findTable (column):
 
 #order is the order that things show up in the csv file
 order= list(map (lambda column : (findTable(column),column), 
-        ["Rank", "Name","Platform","Year","Genre","Publisher",
-            "NA_Sales","EU_Sales","JP_Sales","Other_Sales","Global_Sales"]))
+        ["rank", "name","platform","year","genre","publisher",
+            "NA_Sales","EU_Sales","JP_Sales","Other_Sales","globalsales"]))
 
 #references are tables that are related to each other
 references = {}
@@ -57,22 +89,65 @@ for foreignKey in schema:
             if table not in references:
                 references[table]=[]
             references[table].append(foreignKey)
-for table in references:
-    for i in range(0,len(schema[table])):
-        schema[table][i]=references[table][i][:-1]+"_id"
+            index=schema[table].index(foreignKey)
+            schema[table][index]=schema[table][index][:-1]+"_id"
+#additional dependency information
+dependencyOrder = ["creditcards","customers","sales"]
 #types = {columnName : columnType}
 #most values are string type, so set all to that
 types = {}
 for value in order:
     types[value[1]]="str"
-types["Rank"]="int"
-types["Year"]="year"
+types["cc_id"]="int"
+types["first_name"]="str"
+types["last_name"]="str"
+types["address"]="str"
+types["email"]="str"
+types["password"]="str"
+types["customer_id"]="int"
+types["rank"]="int"
+types["year"]="year"
+types["expiration"]="date"
+types["salesdate"]="date"
 types["id"]="int"
 for table in references:
     for i in range(0,len(schema[table])):
-        types[references[table][i][:-1]+"_id"]="int"
+        if schema[table][i].endswith("_id"):
+            types[schema[table][i]]="int"
 
-def insertHeader (inserts,insertCounts,tableName,insertID=True):
+def generateCreditCard():
+    return {"first_name" : "'"+forgery_py.name.first_name()+"'", 
+            "last_name" : "'"+forgery_py.name.last_name()+"'",
+            "expiration" : "'"+str(generateExpDate())+"'"}
+
+def generateCustomer(card):
+    return {"cc_id" : str(card), "first_name" : "'"+forgery_py.name.first_name()+"'", 
+            "last_name" : "'"+forgery_py.name.last_name()+"'", 
+            "address" : "'"+generateAddress()+"'", "email" : "'"+generateEmail()+"'",
+            "password" : "'"+generatePassword()+"'"}
+
+def generateSale(customer,game):
+    return {"customer_id" : str(customer), "game_id" : str(game), 
+            "salesdate" : "'"+str(forgery_py.date.date(past=True, max_delta=3560))+"'"}
+
+def insertDictRecord (sql,inserts,insertCounts,counts,table,record):
+    insertHeader(inserts,insertCounts,counts,table)
+    for field in schema[table][1:]:
+        inserts[table]+=record[field]
+        postInsert(sql,inserts,insertCounts,counts,table)
+    return counts[table]-1
+
+#tables with randomly generated data are paired with the function 
+#that generates them
+def generateInitialSale (sql,inserts,insertCounts,counts,fields):
+    game = str(fields[('games','id')])
+    card = str(insertDictRecord(sql,inserts,insertCounts,counts,"creditcards",generateCreditCard()))
+    cust = str(insertDictRecord(sql,inserts,insertCounts,counts,"customers",generateCustomer(card)))
+    insertDictRecord(sql,inserts,insertCounts,counts,"sales",generateSale(cust,game))
+
+preloads = {"creditcards" : generateInitialSale,"customers" : generateInitialSale,"sales" : generateInitialSale }
+
+def insertHeader (inserts,insertCounts,counts,tableName,insertID=True):
     inserts[tableName]="INSERT INTO "+tableName+"\n   ("
     #put all but last value of table schema into insert statement
     for column in schema[tableName][:-1]:
@@ -85,6 +160,19 @@ def insertHeader (inserts,insertCounts,tableName,insertID=True):
     else:
         insertCounts[tableName]=0
 
+def postInsert (sql,inserts,insertCounts,counts,tableName):
+    insertCounts[tableName]+=1
+    assert (insertCounts[tableName] <= len(schema[tableName])), "insertions longer than schema!"
+    #table insert statement complete, write out to file
+    if insertCounts[tableName] == len(schema[tableName]):
+        inserts[tableName]+=");\n"
+        sql.write(inserts[tableName])
+        del inserts[tableName]
+        insertCounts[tableName]=0
+        counts[tableName]+=1
+    else:
+        inserts[tableName]+=", "
+
 def convert (csvFileName, newSqlFileName, skipFirstLine=False):
     if not os.path.exists(csvFileName):
         raise ConvertException("CSV file "+csvFileName+" could not be found!")
@@ -93,9 +181,12 @@ def convert (csvFileName, newSqlFileName, skipFirstLine=False):
     i=0
     #keep track of inserted values in order to deal with references
     with open (csvFileName,'r') as csv, open(newSqlFileName,'w') as sql:
-        exists = {}
         if skipFirstLine:
             csv.readline()
+        uniques = {}
+        counts = {}
+        for table in schema:
+            counts[table]=1
         for line in csv:
             fields = {}
             #write insert statement by table instead of csv order
@@ -123,15 +214,15 @@ def convert (csvFileName, newSqlFileName, skipFirstLine=False):
                 fieldType = types[order[i][1]]
                 if order[i][1] in dupCheck:
                     checkForDuplicates=True
-                if fieldType == "str":
-                    if checkForDuplicates and (order[i][0],"'"+value.strip()+"'") in uniques:
+                if fieldType.startswith("str"):
+                    if (checkForDuplicates and (order[i][0],"'"+value.strip()+"'") in uniques) or order[i][1] in ignore:
                         fields[order[i]]="'"+value.strip()+"'"
                         i+=1
                         if i%len(order) == 0:
                             i=0
                         continue
                 elif fieldType == "int":
-                    if checkForDuplicates and (order[i][0],value.strip()) in uniques:
+                    if (checkForDuplicates and (order[i][0],value.strip()) in uniques) or order[i][1] in ignore:
                         fields[order[i]]=value.strip()
                         i+=1
                         if i%len(order) == 0:
@@ -139,9 +230,9 @@ def convert (csvFileName, newSqlFileName, skipFirstLine=False):
                         continue
                 #insert top part of INSERT statement
                 if order[i][0] not in inserts:
-                    insertHeader(inserts,insertCounts,order[i][0])
+                    insertHeader(inserts,insertCounts,counts,order[i][0])
                     fields[(order[i][0],schema[order[i][0]][0])]=counts[order[i][0]]
-                if fieldType == "str":
+                if fieldType.startswith("str"):
                     inserts[order[i][0]]+="'"+value.strip()+"'"
                     fields[order[i]]="'"+value.strip()+"'"
                 elif fieldType == "int":
@@ -150,55 +241,41 @@ def convert (csvFileName, newSqlFileName, skipFirstLine=False):
                 elif fieldType == "year":
                     inserts[order[i][0]]+=value.strip()
                     fields[order[i]]=value.strip()
+                elif fieldType == "date":
+                    inserts[order[i][0]]+=value.strip()
+                    fields[order[i]]=value.strip()
                 else:
                     raise ConvertException("Unknown type "+fieldType)
                 if checkForDuplicates:
                     uniques[(order[i][0],fields[order[i]])]=fields[(order[i][0],schema[order[i][0]][0])]
-                insertCounts[order[i][0]]+=1
-                assert (insertCounts[order[i][0]] <= len(schema[order[i][0]])), "insertions longer than schema!"
-                #table insert statement complete, write out to file
-                if insertCounts[order[i][0]] == len(schema[order[i][0]]):
-                    inserts[order[i][0]]+=");\n"
-                    sql.write(inserts[order[i][0]])
-                    del inserts[order[i][0]]
-                    insertCounts[order[i][0]]=0
-                    counts[order[i][0]]+=1
-                else:
-                    inserts[order[i][0]]+=", "
+                postInsert(sql,inserts,insertCounts,counts,order[i][0])
                 i+=1
                 if i%len(order) == 0:
                     i=0
             #handle relationships now that entities are assumed to be processed
             for child,parents in references.items():
-                for parent in parents:
-                    for column in schema[parent]:
-                        if (parent,column) in additionalInfo:
-                            if child not in inserts:
-                                insertHeader(inserts,insertCounts,child,False)
-                            inserts[child]+=str(fields[(parent,column)])
-                            insertCounts[child]+=1
-                            if insertCounts[child] == len(schema[child]):
-                                inserts[child]+=");\n"
-                                sql.write(inserts[child])
-                                del inserts[child]
-                                insertCounts[child]=0
-                                counts[child]+=1
-                            else:
-                                inserts[child]+=", "
-                    for field in fields.values():
-                        if (parent,field) in uniques:
-                            if child not in inserts:
-                                insertHeader(inserts,insertCounts,child,False)
-                            inserts[child]+=str(uniques[(parent,field)])
-                            insertCounts[child]+=1
-                            if insertCounts[child] == len(schema[child]):
-                                inserts[child]+=");\n"
-                                sql.write(inserts[child])
-                                del inserts[child]
-                                insertCounts[child]=0
-                                counts[child]+=1
-                            else:
-                                inserts[child]+=", "
+                if child in preloads:
+                    preloads[child](sql,inserts,insertCounts,counts,fields)
+                    continue
+                for column in schema[child]:
+                    if len(column) > 3:
+                        parent = column[:-3]+'s'
+                    else:
+                        parent = None
+                    if parent in schema:
+                        for parentColumn in schema[parent]:
+                            if (parent,parentColumn) in additionalInfo:
+                                if child not in inserts:
+                                    insertHeader(inserts,insertCounts,counts,child,False)
+                                inserts[child]+=str(fields[(parent,parentColumn)])
+                                postInsert(sql,inserts,insertCounts,counts,child)
+                                continue
+                        for key, field in fields.items():
+                            if (parent,field) in uniques:
+                                if child not in inserts:
+                                    insertHeader(inserts,insertCounts,counts,child,False)
+                                inserts[child]+=str(uniques[(parent,field)])
+                                postInsert(sql,inserts,insertCounts,counts,child)
     if i!=0:
         raise ConvertException(csvFileName+" could not be properly parsed! Columns not properly defined!")
     for table, count in insertCounts.items():
@@ -210,10 +287,14 @@ def convert (csvFileName, newSqlFileName, skipFirstLine=False):
 def writeCreateType (sqlFile,colType):
     if colType =="str":
         sqlFile.write("VARCHAR(200)")
+    elif colType.startswith("str"):
+        sqlFile.write("VARCHAR("+colType[3:]+")")
     elif colType == "int":
         sqlFile.write("INTEGER")
     elif colType == "year":
         sqlFile.write("YEAR")
+    elif colType == "date":
+        sqlFile.write("DATE")
     else:
         raise WriteException("Unknown type "+colType)
 
@@ -277,7 +358,7 @@ if __name__ == "__main__":
         with open("create_"+sys.argv[2],"w") as sql:
             #for entity tables
             for table in schema:
-                if table not in references:
+                if table not in references and table not in dependencyOrder:
                     sql.write("CREATE TABLE "+table+" (\n   ")
                     #create key field
                     writeColumn(sql,schema[table][0])
@@ -289,7 +370,7 @@ if __name__ == "__main__":
                     sql.write("\n);\n\n")
             #for relationship tables
             for table in schema:
-                if table in references:
+                if table in references and table not in dependencyOrder:
                     sql.write("CREATE TABLE "+table+" (\n   ")
                     #write values first
                     writeColumn(sql,schema[table][0])
@@ -300,10 +381,32 @@ if __name__ == "__main__":
                         sql.write(" NOT NULL")
                     #now write foreign key constraints
                     for column in schema[table]:
+                        if len(column) < 3 or not column.endswith("_id"):
+                            continue
                         parent = column[:-3]+"s"
-                        sql.write(",\n   CONSTRAINT "+"fk_"+table+"_"+parent+" FOREIGN KEY (`"+column+"`) REFERENCES `"+parent+"`(id) ON DELETE CASCADE")
-                        #sql.write(",\n   FOREIGN KEY (`"+column+"`) REFERENCES `"+parent)
+                        if parent in schema:
+                            sql.write(",\n   CONSTRAINT "+"fk_"+table+"_"+parent+" FOREIGN KEY (`"+column+"`) REFERENCES `"+parent+"`(id) ON DELETE CASCADE")
                     sql.write("\n);\n\n")
-                    #sql.write("\n) ENGINE=InnoDB DEFAULT CHARSET=latin1;\n\n")
+            #for tables with a dependencyOrder
+            for table in dependencyOrder:
+                sql.write("CREATE TABLE "+table+" (\n   ")
+                #write values first
+                writeColumn(sql,schema[table][0])
+                sql.write(" PRIMARY KEY NOT NULL AUTO_INCREMENT")
+                #now write foreign key constraints
+                for column in schema[table][1:]:
+                    sql.write(",\n   ");
+                    writeColumn(sql,column)
+                    sql.write(" NOT NULL")
+                for column in schema[table][1:]:
+                    if (table,column) in additionalDependency:
+                        parent = additionalDependency[(table,column)]
+                    else:
+                        if len(column) < 3 or not column.endswith("_id"):
+                            continue
+                        parent = column[:-3]+"s"
+                    if parent in schema:
+                        sql.write(",\n   CONSTRAINT "+"fk_"+table+"_"+parent+" FOREIGN KEY (`"+column+"`) REFERENCES `"+parent+"`(id) ON DELETE CASCADE")
+                sql.write("\n);\n\n")
     except ConvertException as e:
         print(e)
