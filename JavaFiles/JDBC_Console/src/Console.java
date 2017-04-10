@@ -4,14 +4,20 @@ import java.util.Scanner;
 
 public class Console {
 
-	public static void main(String[] args) throws Exception
+	private static void displayMenuOptions()
 	{
-		
-		System.out.println("Welcome to JDBC Console!");
-		Class.forName("com.mysql.jdbc.Driver").newInstance();
-		
-		Connection connection = DriverManager.getConnection("jdbc:mysql:///moviedb?autoReconnect=true&useSSL=false","root", "password");
-		
+		System.out.println("1. Print out the movies featuring a given star (ID or first and last name required)");
+		System.out.println("2. Insert a new star into the database");
+		System.out.println("3. Insert a new customer into the database");
+		System.out.println("4. Delete a customer from the database");
+		System.out.println("5. Provide the metadata of the database");
+		System.out.println("6. Enter a SQL Command");
+		System.out.println("7. exit the menu (will be implemented later)");
+		System.out.println("8. Exit the program");
+	}
+	
+	private static void printMoviesGivenFeaturedStar(Connection connection) throws Exception
+	{
 		Scanner scan = new Scanner(System.in);
 		
 		System.out.print("Enter the first and last name or id of the star to display the movies they are featured in: ");
@@ -61,6 +67,52 @@ public class Console {
 			System.out.print(result.getString(5) + " \t");
 			System.out.println(result.getString(6) + " \t");
 		}
+	}
+	
+	public static void main(String[] args) throws Exception
+	{	
+		System.out.println("Welcome to JDBC Console!");
+		Class.forName("com.mysql.jdbc.Driver").newInstance();
+		
+		Connection connection = DriverManager.getConnection("jdbc:mysql:///moviedb?autoReconnect=true&useSSL=false","root", "password");
+		
+		Scanner scan = new Scanner(System.in);
+		
+		boolean done = false;
+		
+		
+		while(!done)
+		{
+			displayMenuOptions();
+			System.out.print("Enter numeric choice (1-8): ");
+			Integer choice = scan.nextInt();
+			switch(choice)
+			{
+			case 1:
+				printMoviesGivenFeaturedStar(connection);
+				break;
+			case 2:
+				break;
+			case 3:
+				break;
+			case 4:
+				break;
+			case 5:
+				break;
+			case 6:
+				break;
+			case 7:
+				done = true;
+				break;
+			case 8:
+				done = true;
+				break;
+			default:
+				System.out.println("Invalid choice... program will now exit");
+				done = true;
+			}
+		}
+		
 	}
  
 }
