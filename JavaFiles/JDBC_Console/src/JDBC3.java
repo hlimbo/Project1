@@ -17,7 +17,7 @@
 //		   
 //		// prepare SQL statement template that's to be repeatedly excuted
 //		String updateString = "update stars set first_name = ? where id = ?";
-//		            PreparedStatement updateStars = connection.prepareStatement(updateString);
+//		PreparedStatement updateStars = connection.prepareStatement(updateString);
 //		   
 //        // values for first and second "?" wildcard in statement template
 //		int [] ids = {755011, 755017};

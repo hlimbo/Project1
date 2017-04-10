@@ -1,6 +1,6 @@
 import java.sql.*;
 import java.util.Scanner;
-
+import java.util.ArrayList;
 
 public class Console {
 
@@ -67,6 +67,8 @@ public class Console {
 			System.out.print(result.getString(5) + " \t");
 			System.out.println(result.getString(6) + " \t");
 		}
+		
+		scan.close();
 	}
 	
 	private static void insertNewStar(Connection connection) throws Exception
@@ -85,7 +87,33 @@ public class Console {
 	}
 	
 	private static void displayMetadata(Connection connection) throws Exception
-	{
+	{				
+		DatabaseMetaData metadataDB = connection.getMetaData();
+		
+		ResultSet tables = metadataDB.getTables(connection.getCatalog(), null, "%", null);
+		
+		//catalog = database name
+		//catalogs.getString(1);//prints out the databases.
+		
+		//prints out the dabase name
+		//System.out.println(connection.getCatalog());
+		
+		while(tables.next())
+		{
+			String tableName = tables.getString("TABLE_NAME");
+			System.out.println(tableName);
+			ResultSet tableColumns = metadataDB.getColumns(connection.getCatalog(),null,tableName, "%");
+			
+			while(tableColumns.next())
+			{
+				String columnName = tableColumns.getString("COLUMN_NAME");
+				String columnType = tableColumns.getString("TYPE_NAME");
+				System.out.print(columnName + ":" +  columnType + " |");
+			}
+			System.out.println();
+		}
+		
+		
 		
 	}
 	
@@ -154,6 +182,7 @@ public class Console {
 			}
 		}
 		
+		scan.close();
 	}
  
 }
