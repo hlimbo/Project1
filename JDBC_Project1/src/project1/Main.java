@@ -88,6 +88,8 @@ public class Main {
 			System.out.println("No rows were "+change+".");
 		}
 	}
+	
+	
 
 	public static void queryMain (Connection conn) {
 		Scanner cmdline = new Scanner(System.in);
@@ -175,7 +177,56 @@ public class Main {
 					fname = name.split(" ")[0];
 					lname = name.split(" ")[1];
 				}
+				
 				//TODO
+				try
+				{
+					///Find creditcard holder's id given creditcard holder's first name and last name.
+					//Select id from creditcards where first_name="first" and last_name="last
+					String ccQuery = "SELECT id FROM creditcards WHERE first_name = ? and last_name = ?";
+					PreparedStatement ccStatement = conn.prepareStatement(ccQuery);
+					ccStatement.setString(1, fname);
+					ccStatement.setString(2, lname);
+					ResultSet resultIDSet = ccStatement.executeQuery();
+					
+					//if no credit card ids are associated with the first and last name provided.
+					if(!resultIDSet.next())
+					{
+						System.out.println("Cannot add " + fname + " " + lname + " into the database ");
+						return;
+					}
+					
+					String cc_id = resultIDSet.getString(1);
+					//insert the customer into the database
+					String insertSQL = "INSERT INTO customers (first_name, last_name, cc_id, address, email, password) VALUES(?, ?, ?, ?, ?, ?)";	
+					PreparedStatement insertStatement = conn.prepareStatement(insertSQL);
+					
+					String address = "";
+					String email = "";
+					String password = "";
+					
+					System.out.print("Enter address: ");
+					address = cmdline.nextLine();
+					System.out.print("Enter email: ");
+					email = cmdline.nextLine();
+					System.out.print("Enter password: ");
+					password = cmdline.nextLine();
+					
+					insertStatement.setString(1, fname);
+					insertStatement.setString(2, lname);
+					insertStatement.setString(3, cc_id);
+					insertStatement.setString(4, address);
+					insertStatement.setString(5, email);
+					insertStatement.setString(6,  password);
+					
+					insertStatement.executeUpdate();
+					System.out.println("Successfully inserted: " + name + " into the customers table");
+				}
+				catch(SQLException e)
+				{
+					printCause(e);
+				}
+				
 				break;
 			case "delcust":
 				System.out.println("Enter the id of the Customer to be deleted.");
