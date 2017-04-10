@@ -12,7 +12,7 @@ import forgery_py
 random.seed()
 
 def generateEmail ():
-    return forgery_py.internet.email_address(forgery_py.internet.domain_name())
+    return forgery_py.internet.email_address(forgery_py.name.company_name())
 
 def generateExpDate ():
     #up to 10 years
