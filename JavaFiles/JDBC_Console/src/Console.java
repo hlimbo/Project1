@@ -69,6 +69,42 @@ public class Console {
 		}
 	}
 	
+	private static void insertNewStar(Connection connection) throws Exception
+	{
+		
+	}
+	
+	private static void insertNewCustomer(Connection connection) throws Exception
+	{
+		
+	}
+	
+	private static void deleteCustomer(Connection connection) throws Exception
+	{
+		
+	}
+	
+	private static void displayMetadata(Connection connection) throws Exception
+	{
+		
+	}
+	
+	private static void enterSQLCommand(Connection connection) throws Exception
+	{
+		
+	}
+	
+	//needs to logout user from the database..
+	private static boolean exitMenu(Connection connection) throws Exception
+	{
+		return true;
+	}
+	
+	private static boolean exitProgram(Connection connection) throws Exception
+	{
+		return true;
+	}
+	
 	public static void main(String[] args) throws Exception
 	{	
 		System.out.println("Welcome to JDBC Console!");
@@ -92,20 +128,25 @@ public class Console {
 				printMoviesGivenFeaturedStar(connection);
 				break;
 			case 2:
+				insertNewStar(connection);
 				break;
 			case 3:
+				insertNewCustomer(connection);
 				break;
 			case 4:
+				deleteCustomer(connection);
 				break;
 			case 5:
+				displayMetadata(connection);
 				break;
 			case 6:
+				enterSQLCommand(connection);
 				break;
 			case 7:
-				done = true;
+				done = exitMenu(connection);
 				break;
 			case 8:
-				done = true;
+				done = exitProgram(connection);
 				break;
 			default:
 				System.out.println("Invalid choice... program will now exit");
