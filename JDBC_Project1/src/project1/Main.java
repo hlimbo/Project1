@@ -192,13 +192,37 @@ public class Main {
 				break;
 			case "meta":
 				try {
-					Statement statement = conn.createStatement();
-					ResultSet result = statement.executeQuery("SHOW TABLES");
-					System.out.println("Tables of "+DATABASE+":");
-					while (result.next()) {
-						printRow(result);
-						System.out.print(", ");
+//					Statement statement = conn.createStatement();
+//					ResultSet result = statement.executeQuery("SHOW TABLES");
+//					System.out.println("Tables of "+DATABASE+":");
+//					while (result.next()) {
+//						printRow(result);
+//						System.out.print(", ");
+					
+					DatabaseMetaData metadataDB = conn.getMetaData();
+					ResultSet tables = metadataDB.getTables(conn.getCatalog(), null, "%", null);
+					
+					while(tables.next())
+					{
+						String tableName = tables.getString("TABLE_NAME");
+						System.out.println(tableName);
+						ResultSet tableColumns = metadataDB.getColumns(conn.getCatalog(),null,tableName, "%");
+						
+						
+						tableColumns.next();
+						String columnName = tableColumns.getString("COLUMN_NAME");
+						String columnType = tableColumns.getString("TYPE_NAME");
+						System.out.print(columnName + ":" +  columnType);
+						
+						while(tableColumns.next())
+						{
+							columnName = tableColumns.getString("COLUMN_NAME");
+							columnType = tableColumns.getString("TYPE_NAME");
+							System.out.print(" | " + columnName + ":" +  columnType);
+						}
+						System.out.println();
 					}
+					
 					System.out.println();
 				} catch (SQLException error) {
 					printCause(error);
@@ -274,7 +298,7 @@ public class Main {
 			inp = cmdline.nextLine();
 			if (inp.compareToIgnoreCase("login")==0) {
 				login();
-			} else if (inp.compareToIgnoreCase("quit")==0 || inp.compareToIgnoreCase("exit")) {
+			} else if (inp.compareToIgnoreCase("quit")==0 || inp.compareToIgnoreCase("exit")==0) {
 				running = false;
 			} else {
 				System.out.println("Available commands are login, quit.");
