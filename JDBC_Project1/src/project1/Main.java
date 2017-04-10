@@ -254,7 +254,7 @@ public class Main {
 				+"&useSSL=false",user,password);
 				System.out.println("Login successful.");
 				queryMain(connection);
-				break;
+				return;
 			} catch (SQLException error)  {
 				printCause(error);
 				
@@ -268,18 +268,18 @@ public class Main {
 		boolean running = true;
 		String inp = "";
 		Scanner cmdline = new Scanner(System.in);
-		login();
-		/*while (running) {
+		//login();
+		while (running) {
 			System.out.println("Enter your command.");
 			inp = cmdline.nextLine();
 			if (inp.compareToIgnoreCase("login")==0) {
 				login();
-			} else if (inp.compareToIgnoreCase("quit")==0) {
+			} else if (inp.compareToIgnoreCase("quit")==0 || inp.compareToIgnoreCase("exit")) {
 				running = false;
 			} else {
 				System.out.println("Available commands are login, quit.");
 			}
-		}*/
+		}
 	}
 
 }
