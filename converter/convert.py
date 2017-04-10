@@ -346,12 +346,15 @@ if __name__ == "__main__":
                     statement=""
             #handle entities first
             for table in schema:
-                if table not in references:
+                if table not in references and table not in dependencyOrder:
                     writeInsert(newSql,columns,values,table)
             #handle relationships now
             for table in schema:
-                if table in references:
+                if table in references and table not in dependencyOrder:
                     writeInsert(newSql,columns,values,table)
+            #handle dependencyOrder last
+            for table in dependencyOrder:
+                writeInsert(newSql,columns,values,table)
         #replace file with optimized version
         os.rename("_new_"+sys.argv[2],sys.argv[2])
         #write createtable script 
