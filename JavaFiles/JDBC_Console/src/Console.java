@@ -73,7 +73,17 @@ public class Console {
 	
 	private static void insertNewStar(Connection connection) throws Exception
 	{
-		
+		Scanner scanner = new Scanner(System.in);
+		System.out.print("Enter new star name to insert into database: ");
+		String response = scanner.nextLine();
+		String[] name = response.split(" ");
+		String first_name = name[0];
+		String last_name = name[1];
+		String insertString = "INSERT INTO stars (first_name, last_name) VALUES(" + "\"" + first_name + "\"," +" \"" + last_name + "\""  + ")";
+		Statement update = connection.createStatement();
+		int retID = update.executeUpdate(insertString);
+		System.out.println("retID = " + retID);
+		scanner.close();
 	}
 	
 	private static void insertNewCustomer(Connection connection) throws Exception
@@ -89,14 +99,7 @@ public class Console {
 	private static void displayMetadata(Connection connection) throws Exception
 	{				
 		DatabaseMetaData metadataDB = connection.getMetaData();
-		
 		ResultSet tables = metadataDB.getTables(connection.getCatalog(), null, "%", null);
-		
-		//catalog = database name
-		//catalogs.getString(1);//prints out the databases.
-		
-		//prints out the dabase name
-		//System.out.println(connection.getCatalog());
 		
 		while(tables.next())
 		{
