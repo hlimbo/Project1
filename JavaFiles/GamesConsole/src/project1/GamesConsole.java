@@ -142,9 +142,25 @@ public class GamesConsole {
 		
 	}
 	
-	private static void addGame(Connection conn)
+	private static void addGame(Connection conn, Scanner cmdline)
 	{
-		
+		String name;
+		System.out.print("Enter name of game: ");
+		name = cmdline.nextLine();
+		name = name.trim();
+		if (name.compareTo("")==0) {
+			System.out.println("game name can not be empty.");
+			return;
+		} 
+		try {
+			String insert = "INSERT INTO games (name) VALUES (?)"; 
+			PreparedStatement statement = conn.prepareStatement(insert);
+			statement.setString(1, name);
+			int result = statement.executeUpdate();
+			printRowChange(result,"updated");
+		} catch (SQLException error) {
+			printCause(error);
+		}
 	}
 	
 	//optional will do later
@@ -153,24 +169,153 @@ public class GamesConsole {
 		
 	}
 	
-	private static void addCustomer(Connection conn)
+	private static void addCustomer(Connection conn, Scanner cmdline)
 	{
+		System.out.println("Enter the name of the Customer to be added.");
+		String name = cmdline.nextLine();
+		name=name.trim();
+		String fname="";
+		String lname="";
+		if (name.compareTo("")==0) {
+			System.out.println("A name can not be empty.");
+			return;
+		} else if (name.split(" ").length > 2) {
+			System.out.println("Name is too long for system.\n"
+					+"First and/(or only) last name expected.");
+			return;
+		} else if (name.split(" ").length == 1) {
+			lname=name;
+		} else {
+			fname = name.split(" ")[0];
+			lname = name.split(" ")[1];
+		}
+		
+		try
+		{
+			///Find creditcard holder's id given creditcard holder's first name and last name.
+			//Select id from creditcards where first_name="first" and last_name="last
+			String ccQuery = "SELECT id FROM creditcards WHERE first_name = ? and last_name = ?";
+			PreparedStatement ccStatement = conn.prepareStatement(ccQuery);
+			ccStatement.setString(1, fname);
+			ccStatement.setString(2, lname);
+			ResultSet resultIDSet = ccStatement.executeQuery();
+			
+			//if no credit card ids are associated with the first and last name provided.
+			if(!resultIDSet.next())
+			{
+				System.out.println("Cannot add " + fname + " " + lname + " into the database. Does not have a record in the creditcards table. ");
+				return;
+			}
+			
+			String cc_id = resultIDSet.getString(1);
+			//insert the customer into the database
+			String insertSQL = "INSERT INTO customers (first_name, last_name, cc_id, address, email, password) VALUES(?, ?, ?, ?, ?, ?)";	
+			PreparedStatement insertStatement = conn.prepareStatement(insertSQL);
+			
+			String address = "";
+			String email = "";
+			String password = "";
+			
+			//QUESTION: should this be randomly generated or allow the user to input these?
+			System.out.print("Enter address: ");
+			address = cmdline.nextLine();
+			System.out.print("Enter email: ");
+			email = cmdline.nextLine();
+			System.out.print("Enter password: ");
+			password = cmdline.nextLine();
+			
+			insertStatement.setString(1, fname);
+			insertStatement.setString(2, lname);
+			insertStatement.setString(3, cc_id);
+			insertStatement.setString(4, address);
+			insertStatement.setString(5, email);
+			insertStatement.setString(6,  password);
+			
+			insertStatement.executeUpdate();
+			System.out.println("Successfully inserted: " + name + " into the customers table");
+		}
+		catch(SQLException e)
+		{
+			printCause(e);
+		}
 		
 	}
 	
-	private static void deleteCustomer(Connection conn)
+	private static void deleteCustomer(Connection conn, Scanner cmdline)
 	{
-		
+		System.out.println("Enter the id of the Customer to be deleted.");
+		String id = cmdline.nextLine();
+		id=id.trim();
+		String del = " DELETE FROM customers WHERE customers.id="+id;
+		try {
+			Statement statement = conn.createStatement();
+			int result = statement.executeUpdate(del);
+			printRowChange(result,"deleted");
+		} catch (SQLException error) {
+			printCause(error);
+		}
 	}
 	
 	private static void displayMetadata(Connection conn)
 	{
-		
+		try {	
+			DatabaseMetaData metadataDB = conn.getMetaData();
+			ResultSet tables = metadataDB.getTables(conn.getCatalog(), null, "%", null);
+			
+			while(tables.next())
+			{
+				String tableName = tables.getString("TABLE_NAME");
+				System.out.println(tableName);
+				ResultSet tableColumns = metadataDB.getColumns(conn.getCatalog(),null,tableName, "%");
+				
+				
+				tableColumns.next();
+				String columnName = tableColumns.getString("COLUMN_NAME");
+				String columnType = tableColumns.getString("TYPE_NAME");
+				System.out.print(columnName + ":" +  columnType);
+				
+				while(tableColumns.next())
+				{
+					columnName = tableColumns.getString("COLUMN_NAME");
+					columnType = tableColumns.getString("TYPE_NAME");
+					System.out.print(" | " + columnName + ":" +  columnType);
+				}
+				System.out.println();
+			}
+			
+			System.out.println();
+		} catch (SQLException error) {
+			printCause(error);
+		}
 	}
 	
-	private static void runQueryCommand(Connection conn)
+	private static void runQueryCommand(Connection conn, Scanner cmdline)
 	{
-		
+		System.out.println("Type in your SELECT/UPDATE/INSERT/DELETE SQL statement.");
+		String sql = cmdline.nextLine();
+		sql = sql.trim();
+		try {
+			Statement statement = conn.createStatement();
+			ResultSet result;
+			int rowCount;
+			if (sql.toUpperCase().startsWith("SELECT")) {
+				result = statement.executeQuery(sql);
+				printResult(result);
+			} else if (sql.toUpperCase().startsWith("UPDATE")) {
+				rowCount = statement.executeUpdate(sql);
+				printRowChange(rowCount,"updated");
+			} else if (sql.toUpperCase().startsWith("INSERT")) {
+				rowCount = statement.executeUpdate(sql);
+				printRowChange(rowCount,"inserted");
+			} else if (sql.toUpperCase().startsWith("DELETE")) {
+				rowCount = statement.executeUpdate(sql);
+				printRowChange(rowCount,"deleted");
+			} else {
+				System.out.println("Query not of type SELECT, UPDATE, INSERT, or DELETE");
+			}
+		} catch (SQLException error) {
+			printCause(error);
+		}
 	}
 	
 	
@@ -513,19 +658,19 @@ public class GamesConsole {
 					GamesConsole.printGamesByPublisher(loginConnection, cmdline);
 					break;
 				case addgame:
-					GamesConsole.addGame(loginConnection);
+					GamesConsole.addGame(loginConnection, cmdline);
 					break;
 				case addcust:
-					GamesConsole.addCustomer(loginConnection);
+					GamesConsole.addCustomer(loginConnection, cmdline);
 					break;
 				case delcust:
-					GamesConsole.deleteCustomer(loginConnection);
+					GamesConsole.deleteCustomer(loginConnection, cmdline);
 					break;
 				case meta:
 					GamesConsole.displayMetadata(loginConnection);
 					break;
 				case query:
-					GamesConsole.runQueryCommand(loginConnection);
+					GamesConsole.runQueryCommand(loginConnection, cmdline);
 					break;
 				case help:
 					GamesConsole.displayConsoleCommands();
@@ -552,6 +697,9 @@ public class GamesConsole {
 //				System.out.println("Available commands are login, quit.");
 //			}
 //		}
+		
+		if(loginConnection != null)
+			loginConnection.close();
 		
 		cmdline.close();
 	}
