@@ -90,10 +90,89 @@ public class GamesConsole {
 	}
 	
 	//Console options
-	private static void printGamesFromPublisher(Connection conn)
+	private static void displayConsoleCommands()
+	{
+		System.out.println("Known Console Commands:");
+		System.out.println("pubgames, addgame, addcust, delcust, meta, query, logout\n");
+	}
+	
+	private static void printGamesByPublisher(Connection conn, Scanner cmdline)
+	{
+		System.out.print("Enter name of publisher: ");
+		String pubname = cmdline.nextLine();
+		if (pubname.trim().compareTo("")==0) 
+		{
+			System.out.println("Publisher name cannot be empty.");
+		} 
+		else 
+		{
+			//print out games featuring a given publisher
+			//1. games 2. publishers 3. publishers_of_games
+			String searchPub = "SELECT id FROM publishers WHERE publisher = ?";
+			String searchGames = "SELECT game_id FROM publishers_of_games WHERE publisher_id = ?";
+			String listGames = "Select * FROM games WHERE id IN (" + searchGames + ")" + " ORDER BY games.name";
+			try {
+				PreparedStatement searchPubStatement = conn.prepareStatement(searchPub);
+				PreparedStatement listGamesStatement = conn.prepareStatement(listGames);
+				searchPubStatement.setString(1, pubname);
+				
+				ResultSet result = searchPubStatement.executeQuery();
+				int game_id = -1;
+				if(!result.next())
+				{
+					System.out.println("Cannot find publisher: " + pubname + " in the database");					
+				}
+				else //printout games from a given publisher existing in the database.
+				{
+					game_id = result.getInt(1);
+					listGamesStatement.setInt(1,game_id);
+					ResultSet gamesSet = listGamesStatement.executeQuery();
+					printResult(gamesSet);	
+				}
+				
+			} catch (SQLException error) {
+				printCause(error);
+			}
+		}
+	}
+	
+	//optional
+	private static void printGamesByGenre(Connection conn)
 	{
 		
 	}
+	
+	private static void addGame(Connection conn)
+	{
+		
+	}
+	
+	//optional will do later
+	private static void addPublisher(Connection conn)
+	{
+		
+	}
+	
+	private static void addCustomer(Connection conn)
+	{
+		
+	}
+	
+	private static void deleteCustomer(Connection conn)
+	{
+		
+	}
+	
+	private static void displayMetadata(Connection conn)
+	{
+		
+	}
+	
+	private static void runQueryCommand(Connection conn)
+	{
+		
+	}
+	
 	
 	public static void queryMain (Connection conn) {
 		Scanner cmdline = new Scanner(System.in);
@@ -316,9 +395,9 @@ public class GamesConsole {
 	public static void login() throws Exception {
 		Scanner cmdline = new Scanner(System.in);
 		for (int i=0;i<3;++i) {
-			System.out.println("Enter your user name: ");
+			System.out.print("Enter your username: ");
 			String user = cmdline.nextLine();
-			System.out.println("Enter password: ");
+			System.out.print("Enter password: ");
 			String password = cmdline.nextLine();
 			try {
 				Connection connection = DriverManager.getConnection("jdbc:mysql:///"
@@ -334,24 +413,145 @@ public class GamesConsole {
 		}
 		System.out.println("Three attempts given. Login failed.");
 	}
+	
+	
+	//returns a connection on successful login; null otherwise
+	private static Connection createLoginConnection(Scanner cmdline, int numAttempts) throws Exception
+	{
+		
+		for(int i = 0;i < numAttempts; ++i)
+		{
+			System.out.print("Enter username: ");
+			String user = cmdline.nextLine();
+			System.out.print("Enter password: ");
+			String password = cmdline.nextLine();
+						
+			try
+			{
+				Connection connection = DriverManager.getConnection("jdbc:mysql:///"
+						+DATABASE+"?autoReconnect=true"
+						+"&useSSL=false",user,password);
+						return connection;
+			}
+			catch (SQLException error)
+			{
+				printCause(error);
+			}
+		}
+		
+		return null;
+	}
+	
+
+	public static final String pubgames = "pubgames";
+	public static final String addgame = "addgame";
+	public static final String addcust = "addcust";
+	private static final String delcust = "delcust";
+	private static final String  meta= "meta";
+	private static final String query = "query";
+	private static final String quit = "quit";
+	private static final String logout = "logout";
+	private static final String help = "help";
 
 	public static void main(String[] args) throws Exception {
 		Class.forName("com.mysql.jdbc.Driver").newInstance();
 		boolean running = true;
 		String inp = "";
 		Scanner cmdline = new Scanner(System.in);
-		//login();
-		while (running) {
-			System.out.println("Enter your command.");
-			inp = cmdline.nextLine();
-			if (inp.compareToIgnoreCase("login")==0) {
-				login();
-			} else if (inp.compareToIgnoreCase("quit")==0 || inp.compareToIgnoreCase("exit")==0) {
-				running = false;
-			} else {
-				System.out.println("Available commands are login, quit.");
+	
+		//login menu logic		
+		boolean loginMenuRunning = true;
+		boolean consoleMenuRunning = false;
+		System.out.println("Available commands are login, quit.");
+		System.out.print("Enter your command: ");
+		inp = cmdline.nextLine();
+		Connection loginConnection = null;
+	
+		while(running)
+		{
+			//loginToConsole
+			while(loginMenuRunning)
+			{
+				if(inp.equalsIgnoreCase("login"))
+				{
+					int numAttempts = 3;
+					loginConnection = createLoginConnection(cmdline,numAttempts);
+					if(loginConnection == null)
+					{
+						System.out.println(numAttempts + " attempts given. Login failed.");
+						loginMenuRunning = false;
+						running = false;
+					}
+					else
+					{
+						System.out.println("Login successful.");
+						loginMenuRunning = false;
+						consoleMenuRunning = true;
+					}
+				}
+				else if(inp.equalsIgnoreCase("quit") || inp.equalsIgnoreCase("exit"))
+				{
+					loginMenuRunning = false;
+					running = false;
+				}
+				else
+				{
+					System.out.println("Available commands are login, quit.");
+					System.out.print("Enter your command: ");
+					inp = cmdline.nextLine();
+				}
+			}
+			
+			while(consoleMenuRunning)
+			{
+				//queryMain(loginConnection);
+				System.out.print("Enter your command (type 'help' to display known commands): ");
+				inp = cmdline.nextLine();
+				switch(inp)
+				{
+				case pubgames:
+					GamesConsole.printGamesByPublisher(loginConnection, cmdline);
+					break;
+				case addgame:
+					GamesConsole.addGame(loginConnection);
+					break;
+				case addcust:
+					GamesConsole.addCustomer(loginConnection);
+					break;
+				case delcust:
+					GamesConsole.deleteCustomer(loginConnection);
+					break;
+				case meta:
+					GamesConsole.displayMetadata(loginConnection);
+					break;
+				case query:
+					GamesConsole.runQueryCommand(loginConnection);
+					break;
+				case help:
+					GamesConsole.displayConsoleCommands();
+					break;
+				case logout:
+					consoleMenuRunning = false;
+					loginMenuRunning = true;
+					break;
+				default:
+					break;
+				}
+				
 			}
 		}
+		
+//		while (running) {
+//			System.out.println("Enter your command.");
+//			inp = cmdline.nextLine();
+//			if (inp.compareToIgnoreCase("login")==0) {
+//				login();
+//			} else if (inp.compareToIgnoreCase("quit")==0 || inp.compareToIgnoreCase("exit")==0) {
+//				running = false;
+//			} else {
+//				System.out.println("Available commands are login, quit.");
+//			}
+//		}
 		
 		cmdline.close();
 	}
