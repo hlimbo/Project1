@@ -5,8 +5,21 @@ Run mysql
     mysql -u user -p
 For password type pass, although the phrase pass will not show up
     Enter password: pass
-In mysql prompt run source.sql
+In mysql prompt run source.sql. If you wish to not run this file,
+you can alternatively source the files it runs.
     mysql> source source.sql
+And now you have finished populating gamedb.
+
+Alternatively to running the source.sql file, you can source the
+files it runs.
+Deletes the gamedb if it exists and recreates it.
+    mysql> source del.sql
+use the new database
+    mysql> USE gamedb;
+Create tables of the gamedb.
+    mysql> source createtable.sql
+Populate tables of the gamedb.
+    mysql> source data.sql
 
 JDBC Program in Eclipse:
 -------------------------------------------------------------------

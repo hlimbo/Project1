@@ -1,0 +1,73 @@
+CREATE TABLE platforms (
+   id INTEGER PRIMARY KEY NOT NULL AUTO_INCREMENT,
+   platform VARCHAR(50) NOT NULL
+);
+
+CREATE TABLE games (
+   id INTEGER PRIMARY KEY NOT NULL AUTO_INCREMENT,
+   rank INTEGER,
+   name VARCHAR(200) NOT NULL,
+   year YEAR NOT NULL,
+   globalsales VARCHAR(20)
+);
+
+CREATE TABLE genres (
+   id INTEGER PRIMARY KEY NOT NULL AUTO_INCREMENT,
+   genre VARCHAR(50) NOT NULL
+);
+
+CREATE TABLE publishers (
+   id INTEGER PRIMARY KEY NOT NULL AUTO_INCREMENT,
+   publisher VARCHAR(200) NOT NULL
+);
+
+CREATE TABLE platforms_of_games (
+   game_id INTEGER NOT NULL,
+   platform_id INTEGER NOT NULL,
+   CONSTRAINT fk_platforms_of_games_games FOREIGN KEY (`game_id`) REFERENCES `games`(id) ON DELETE CASCADE,
+   CONSTRAINT fk_platforms_of_games_platforms FOREIGN KEY (`platform_id`) REFERENCES `platforms`(id) ON DELETE CASCADE
+);
+
+CREATE TABLE publishers_of_games (
+   game_id INTEGER NOT NULL,
+   publisher_id INTEGER NOT NULL,
+   platform_id INTEGER NOT NULL,
+   CONSTRAINT fk_publishers_of_games_games FOREIGN KEY (`game_id`) REFERENCES `games`(id) ON DELETE CASCADE,
+   CONSTRAINT fk_publishers_of_games_publishers FOREIGN KEY (`publisher_id`) REFERENCES `publishers`(id) ON DELETE CASCADE,
+   CONSTRAINT fk_publishers_of_games_platforms FOREIGN KEY (`platform_id`) REFERENCES `platforms`(id) ON DELETE CASCADE
+);
+
+CREATE TABLE genres_of_games (
+   game_id INTEGER NOT NULL,
+   genre_id INTEGER NOT NULL,
+   CONSTRAINT fk_genres_of_games_games FOREIGN KEY (`game_id`) REFERENCES `games`(id) ON DELETE CASCADE,
+   CONSTRAINT fk_genres_of_games_genres FOREIGN KEY (`genre_id`) REFERENCES `genres`(id) ON DELETE CASCADE
+);
+
+CREATE TABLE creditcards (
+   id VARCHAR(20) PRIMARY KEY NOT NULL,
+   first_name VARCHAR(50) NOT NULL,
+   last_name VARCHAR(50) NOT NULL,
+   expiration DATE NOT NULL
+);
+
+CREATE TABLE customers (
+   id INTEGER PRIMARY KEY NOT NULL AUTO_INCREMENT,
+   cc_id VARCHAR(20) NOT NULL,
+   first_name VARCHAR(50) NOT NULL,
+   last_name VARCHAR(50) NOT NULL,
+   address VARCHAR(200) NOT NULL,
+   email VARCHAR(50) NOT NULL,
+   password VARCHAR(20) NOT NULL,
+   CONSTRAINT fk_customers_creditcards FOREIGN KEY (`cc_id`) REFERENCES `creditcards`(id) ON DELETE CASCADE
+);
+
+CREATE TABLE sales (
+   id INTEGER PRIMARY KEY NOT NULL AUTO_INCREMENT,
+   customer_id INTEGER NOT NULL,
+   salesdate DATE NOT NULL,
+   game_id INTEGER NOT NULL,
+   CONSTRAINT fk_sales_customers FOREIGN KEY (`customer_id`) REFERENCES `customers`(id) ON DELETE CASCADE,
+   CONSTRAINT fk_sales_games FOREIGN KEY (`game_id`) REFERENCES `games`(id) ON DELETE CASCADE
+);
+
