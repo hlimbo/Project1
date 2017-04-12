@@ -67,7 +67,7 @@ schema = {"games" : ["id","rank","name","year","globalsales"],
             "address", "email", "password"],
         "sales" : ["id","customer_id","salesdate","games"]}
 additionalDependency={("customers","cc_id") : "creditcards"}
-dupCheck=['genre','publisher',"platform"]
+dupCheck=[('genres','genre'),('publishers','publisher'),('platforms','platform'),('game','name')]
 ignore=['NA_Sales','EU_Sales','JP_Sales','Other_Sales']
 #additionalInfo is field values that need to be tracked for dependencies
 additionalInfo=[('games','id')]
@@ -160,6 +160,10 @@ def insertHeader (inserts,insertCounts,counts,tableName,insertID=True):
     else:
         insertCounts[tableName]=0
 
+def clearInsert (inserts,insertCounts,tableName):
+    del inserts[tableName]
+    insertCounts[tableName]=0
+
 def postInsert (sql,inserts,insertCounts,counts,tableName):
     insertCounts[tableName]+=1
     assert (insertCounts[tableName] <= len(schema[tableName])), "insertions longer than schema!"
@@ -167,11 +171,23 @@ def postInsert (sql,inserts,insertCounts,counts,tableName):
     if insertCounts[tableName] == len(schema[tableName]):
         inserts[tableName]+=");\n"
         sql.write(inserts[tableName])
-        del inserts[tableName]
-        insertCounts[tableName]=0
+        clearInsert(inserts,insertCounts,tableName)
         counts[tableName]+=1
     else:
         inserts[tableName]+=", "
+
+
+def getFieldValue (fieldType,value):
+    if fieldType.startswith("str"):
+        return "'"+value.strip()+"'"
+    elif fieldType == "int":
+        return value.strip()
+    elif fieldType == "year":
+        return value.strip()
+    elif fieldType == "date":
+        return value.strip()
+    else:
+        raise ConvertException("Unknown type "+fieldType)
 
 def convert (csvFileName, newSqlFileName, skipFirstLine=False):
     if not os.path.exists(csvFileName):
@@ -179,6 +195,11 @@ def convert (csvFileName, newSqlFileName, skipFirstLine=False):
     if os.path.exists(newSqlFileName):
         raise ConvertException("SQL file "+newSqlFileName+" already exists!")
     i=0
+    #TODO insert postLine code where applicable
+    def postLine ():
+        i+=1
+        if i%len(order) == 0:
+            i=0
     #keep track of inserted values in order to deal with references
     with open (csvFileName,'r') as csv, open(newSqlFileName,'w') as sql:
         if skipFirstLine:
@@ -187,6 +208,7 @@ def convert (csvFileName, newSqlFileName, skipFirstLine=False):
         counts = {}
         for table in schema:
             counts[table]=1
+        skipLine = {}
         for line in csv:
             fields = {}
             #write insert statement by table instead of csv order
@@ -207,48 +229,42 @@ def convert (csvFileName, newSqlFileName, skipFirstLine=False):
                 line=line.replace(line[quote:end+1],line[quote:end+1].replace(",","").replace("\"",""),1)
                 quote=line.find("\"")
             assert (line.find("\"")==-1)
+            for table in schema:
+                skipLine[table]=False
             for value in line.split(","):
+                table = order[i][0]
+                column = order[i][1]
+                if column in ignore:
+                    i+=1
+                    if i%len(order) == 0:
+                        i=0
+                    continue
                 #replace semicolons with colons so file can be post processed
                 value=value.replace(";",",")
-                checkForDuplicates=False
-                fieldType = types[order[i][1]]
-                if order[i][1] in dupCheck:
-                    checkForDuplicates=True
-                if fieldType.startswith("str"):
-                    if (checkForDuplicates and (order[i][0],"'"+value.strip()+"'") in uniques) or order[i][1] in ignore:
-                        fields[order[i]]="'"+value.strip()+"'"
-                        i+=1
-                        if i%len(order) == 0:
-                            i=0
-                        continue
-                elif fieldType == "int":
-                    if (checkForDuplicates and (order[i][0],value.strip()) in uniques) or order[i][1] in ignore:
-                        fields[order[i]]=value.strip()
-                        i+=1
-                        if i%len(order) == 0:
-                            i=0
-                        continue
+                fieldType = types[column]
+                fields[order[i]]=getFieldValue(fieldType,value)
+                #store id
+                if table not in inserts:
+                    fields[(table,schema[table][0])]=counts[table]
+                if (table,column) in dupCheck:
+                    if (order[i],fields[order[i]]) in uniques:
+                        fields[(table,schema[table][0])]=uniques[(order[i],fields[order[i]])]
+                        skipLine[table]=True
+                    else:
+                        uniques[(order[i],fields[order[i]])]=fields[(table,schema[table][0])]
+                if skipLine[table]:
+                    #remove values currently stored for this row
+                    if table in inserts:
+                        clearInsert(inserts,insertCounts,table)
+                    i+=1
+                    if i%len(order) == 0:
+                        i=0
+                    continue
                 #insert top part of INSERT statement
-                if order[i][0] not in inserts:
-                    insertHeader(inserts,insertCounts,counts,order[i][0])
-                    fields[(order[i][0],schema[order[i][0]][0])]=counts[order[i][0]]
-                if fieldType.startswith("str"):
-                    inserts[order[i][0]]+="'"+value.strip()+"'"
-                    fields[order[i]]="'"+value.strip()+"'"
-                elif fieldType == "int":
-                    inserts[order[i][0]]+=value.strip()
-                    fields[order[i]]=value.strip()
-                elif fieldType == "year":
-                    inserts[order[i][0]]+=value.strip()
-                    fields[order[i]]=value.strip()
-                elif fieldType == "date":
-                    inserts[order[i][0]]+=value.strip()
-                    fields[order[i]]=value.strip()
-                else:
-                    raise ConvertException("Unknown type "+fieldType)
-                if checkForDuplicates:
-                    uniques[(order[i][0],fields[order[i]])]=fields[(order[i][0],schema[order[i][0]][0])]
-                postInsert(sql,inserts,insertCounts,counts,order[i][0])
+                if table not in inserts:
+                    insertHeader(inserts,insertCounts,counts,table)
+                inserts[table]+=getFieldValue(fieldType,value)
+                postInsert(sql,inserts,insertCounts,counts,table)
                 i+=1
                 if i%len(order) == 0:
                     i=0
@@ -269,19 +285,24 @@ def convert (csvFileName, newSqlFileName, skipFirstLine=False):
                                     insertHeader(inserts,insertCounts,counts,child,False)
                                 inserts[child]+=str(fields[(parent,parentColumn)])
                                 postInsert(sql,inserts,insertCounts,counts,child)
-                                continue
-                        for key, field in fields.items():
-                            if (parent,field) in uniques:
+                            elif (parent,parentColumn) in dupCheck:
                                 if child not in inserts:
                                     insertHeader(inserts,insertCounts,counts,child,False)
-                                inserts[child]+=str(uniques[(parent,field)])
+                                inserts[child]+=str(uniques[((parent,parentColumn),
+                                    fields[(parent,parentColumn)])])
                                 postInsert(sql,inserts,insertCounts,counts,child)
+                            #    for field in fields.values():
+                            #        if ((parent,parentColumn),field) in uniques:
+                            #            if child not in inserts:
+                            #                insertHeader(inserts,insertCounts,counts,child,False)
+                            #            inserts[child]+=str(uniques[((parent,parentColumn),field)])
+                            #            postInsert(sql,inserts,insertCounts,counts,child)
     if i!=0:
         raise ConvertException(csvFileName+" could not be properly parsed! Columns not properly defined!")
     for table, count in insertCounts.items():
         if count != 0:
             raise ConvertException(csvFileName+" could not be properly parsed! Table "+table
-                    +" doesn't match with count "+str(count))
+                    +" doesn't match with count "+str(count)+"\nDataLeft:\n"+inserts[table]+"\n")
     return
 
 def writeCreateType (sqlFile,colType):
@@ -388,7 +409,8 @@ if __name__ == "__main__":
                             continue
                         parent = column[:-3]+"s"
                         if parent in schema:
-                            sql.write(",\n   CONSTRAINT "+"fk_"+table+"_"+parent+" FOREIGN KEY (`"+column+"`) REFERENCES `"+parent+"`(id) ON DELETE CASCADE")
+                            sql.write(",\n   CONSTRAINT "+"fk_"+table+"_"+parent+" FOREIGN KEY (`"+
+                                    column+"`) REFERENCES `"+parent+"`("+schema[parent][0]+") ON DELETE CASCADE")
                     sql.write("\n);\n\n")
             #for tables with a dependencyOrder
             for table in dependencyOrder:
@@ -409,7 +431,8 @@ if __name__ == "__main__":
                             continue
                         parent = column[:-3]+"s"
                     if parent in schema:
-                        sql.write(",\n   CONSTRAINT "+"fk_"+table+"_"+parent+" FOREIGN KEY (`"+column+"`) REFERENCES `"+parent+"`(id) ON DELETE CASCADE")
+                        sql.write(",\n   CONSTRAINT "+"fk_"+table+"_"+parent+" FOREIGN KEY (`"+
+                                column+"`) REFERENCES `"+parent+"`("+schema[parent][0]+") ON DELETE CASCADE")
                 sql.write("\n);\n\n")
     except ConvertException as e:
         print(e)
