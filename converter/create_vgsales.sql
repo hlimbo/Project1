@@ -1,8 +1,3 @@
-CREATE TABLE publishers (
-   id INTEGER PRIMARY KEY NOT NULL AUTO_INCREMENT,
-   publisher VARCHAR(200)
-);
-
 CREATE TABLE platforms (
    id INTEGER PRIMARY KEY NOT NULL AUTO_INCREMENT,
    platform VARCHAR(200)
@@ -21,6 +16,11 @@ CREATE TABLE genres (
    genre VARCHAR(200)
 );
 
+CREATE TABLE publishers (
+   id INTEGER PRIMARY KEY NOT NULL AUTO_INCREMENT,
+   publisher VARCHAR(200)
+);
+
 CREATE TABLE genres_of_games (
    game_id INTEGER NOT NULL,
    genre_id INTEGER NOT NULL,
@@ -28,18 +28,20 @@ CREATE TABLE genres_of_games (
    CONSTRAINT fk_genres_of_games_genres FOREIGN KEY (`genre_id`) REFERENCES `genres`(id) ON DELETE CASCADE
 );
 
+CREATE TABLE publishers_of_games (
+   game_id INTEGER NOT NULL,
+   publisher_id INTEGER NOT NULL,
+   platform_id INTEGER NOT NULL,
+   CONSTRAINT fk_publishers_of_games_games FOREIGN KEY (`game_id`) REFERENCES `games`(id) ON DELETE CASCADE,
+   CONSTRAINT fk_publishers_of_games_publishers FOREIGN KEY (`publisher_id`) REFERENCES `publishers`(id) ON DELETE CASCADE,
+   CONSTRAINT fk_publishers_of_games_platforms FOREIGN KEY (`platform_id`) REFERENCES `platforms`(id) ON DELETE CASCADE
+);
+
 CREATE TABLE platforms_of_games (
    game_id INTEGER NOT NULL,
    platform_id INTEGER NOT NULL,
    CONSTRAINT fk_platforms_of_games_games FOREIGN KEY (`game_id`) REFERENCES `games`(id) ON DELETE CASCADE,
    CONSTRAINT fk_platforms_of_games_platforms FOREIGN KEY (`platform_id`) REFERENCES `platforms`(id) ON DELETE CASCADE
-);
-
-CREATE TABLE publishers_of_games (
-   game_id INTEGER NOT NULL,
-   publisher_id INTEGER NOT NULL,
-   CONSTRAINT fk_publishers_of_games_games FOREIGN KEY (`game_id`) REFERENCES `games`(id) ON DELETE CASCADE,
-   CONSTRAINT fk_publishers_of_games_publishers FOREIGN KEY (`publisher_id`) REFERENCES `publishers`(id) ON DELETE CASCADE
 );
 
 CREATE TABLE creditcards (

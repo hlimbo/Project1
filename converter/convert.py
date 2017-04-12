@@ -59,7 +59,8 @@ schema = {"games" : ["id","rank","name","year","globalsales"],
         "genres" : ["id","genre"],
         "genres_of_games" : ["games","genres"],
         "publishers" : ["id","publisher"],
-        "publishers_of_games" : ["games","publishers"],
+        #a publisher of a game publishes it for a particular platform
+        "publishers_of_games" : ["games","publishers","platforms"],
         "platforms" : ["id","platform"],
         "platforms_of_games" : ["games","platforms"],
         "creditcards" : ["id", "first_name", "last_name", "expiration"],
@@ -291,12 +292,6 @@ def convert (csvFileName, newSqlFileName, skipFirstLine=False):
                                 inserts[child]+=str(uniques[((parent,parentColumn),
                                     fields[(parent,parentColumn)])])
                                 postInsert(sql,inserts,insertCounts,counts,child)
-                            #    for field in fields.values():
-                            #        if ((parent,parentColumn),field) in uniques:
-                            #            if child not in inserts:
-                            #                insertHeader(inserts,insertCounts,counts,child,False)
-                            #            inserts[child]+=str(uniques[((parent,parentColumn),field)])
-                            #            postInsert(sql,inserts,insertCounts,counts,child)
     if i!=0:
         raise ConvertException(csvFileName+" could not be properly parsed! Columns not properly defined!")
     for table, count in insertCounts.items():
