@@ -1,0 +1,17 @@
+Populating Database: 
+-------------------------------------------------------------------
+cd to the directory containing this how_to_run.txt
+Run mysql
+    mysql -u user -p
+For password type pass, although the phrase pass will not show up
+    Enter password: pass
+In mysql prompt run source.sql
+    mysql> source source.sql
+
+JDBC Program in Eclipse:
+-------------------------------------------------------------------
+
+JDBC Program in Command Line:
+-------------------------------------------------------------------
+cd to the directory containing this how_to_run.txt
+java -cp .:mysql-connector-java-5.1.41-bin.jar TODO
