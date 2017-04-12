@@ -1,6 +1,7 @@
 #python 3 script
 #Developed in python version 3.5.3
 import os
+import codecs
 import sys
 import string
 import random
@@ -8,6 +9,9 @@ import random
 #forgery_py under an MIT license, used to generate 
 # names, addresses, emails, and dates
 import forgery_py
+#unidecode under GPL license
+from unidecode import unidecode
+
 
 random.seed()
 
@@ -220,7 +224,8 @@ def convert (csvFileName, newSqlFileName, skipFirstLine=False):
                 continue
             line=line.replace("'","\\'")
             #replace non-ASCII characters
-            line=line.encode("ascii",'replace').decode("ascii")
+            #line=line.encode("utf_8",'replace').decode("ascii")
+            line=unidecode(line).encode("ascii",'replace').decode("ascii")
             quote = line.find("\"")
             #remove commas within quotes
             while quote!= -1:
