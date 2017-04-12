@@ -187,7 +187,7 @@ public class GamesConsole {
 	//insert game by providing name (mandatory) and year (optional)
 	//if year is not provided, game name will be inserted into the database without the year specified.
 	//if  rank is not provided, game name will be inserted into the database without the rank specified.
-	private static void addGame(Connection conn, Scanner cmdline) throws Exception
+	private static void addGame(Connection conn, Scanner cmdline)
 	{
 		System.out.println("Enter name of game: ");
 		String name = cmdline.nextLine();
@@ -207,7 +207,7 @@ public class GamesConsole {
 		}
 	}
 	
-	private static void addPublisher(Connection conn,Scanner cmdline) throws Exception
+	private static void addPublisher(Connection conn,Scanner cmdline)
 	{
 		System.out.println("Enter name of publisher: ");
 		String name = cmdline.nextLine();
