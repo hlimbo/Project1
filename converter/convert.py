@@ -103,7 +103,6 @@ dependencyOrder = ["creditcards","customers","sales"]
 types = {}
 for value in order:
     types[value[1]]="str"
-types["cc_id"]="int"
 types["first_name"]="str"
 types["last_name"]="str"
 types["address"]="str"
@@ -115,24 +114,43 @@ types["year"]="year"
 types["expiration"]="date"
 types["salesdate"]="date"
 types["id"]="int"
+types[("creditcards","id")]="str"
 for table in references:
     for i in range(0,len(schema[table])):
         if schema[table][i].endswith("_id"):
             types[schema[table][i]]="int"
+types["cc_id"]="str"
+
+
+def generateCreditCardNumber ():
+    num = "" 
+    for i in range(0,16):
+        num+=str(0)
+    while num in generateCreditCardNumber._generated:
+        num=""
+        for i in range(0,16):
+            num+=str(random.randint(0,9))
+    generateCreditCardNumber._generated[num]=True
+    return num
+generateCreditCardNumber._generated={"0000000000000000" : True}
 
 def generateCreditCard():
-    return {"first_name" : "'"+forgery_py.name.first_name()+"'", 
+    return {"id" : "'"+generateCreditCardNumber()+"'",
+            "first_name" : "'"+forgery_py.name.first_name()+"'", 
             "last_name" : "'"+forgery_py.name.last_name()+"'",
             "expiration" : "'"+str(generateExpDate())+"'"}
 
 def generateCustomer(card):
-    return {"cc_id" : str(card), "first_name" : "'"+forgery_py.name.first_name()+"'", 
+    return {"cc_id" : str(card), 
+            "first_name" : "'"+forgery_py.name.first_name()+"'", 
             "last_name" : "'"+forgery_py.name.last_name()+"'", 
-            "address" : "'"+generateAddress()+"'", "email" : "'"+generateEmail()+"'",
+            "address" : "'"+generateAddress()+"'",
+            "email" : "'"+generateEmail()+"'",
             "password" : "'"+generatePassword()+"'"}
 
 def generateSale(customer,game):
-    return {"customer_id" : str(customer), "game_id" : str(game), 
+    return {"customer_id" : str(customer),
+            "game_id" : str(game), 
             "salesdate" : "'"+str(forgery_py.date.date(past=True, max_delta=3560))+"'"}
 
 def insertDictRecord (sql,inserts,insertCounts,counts,table,record):
@@ -146,8 +164,12 @@ def insertDictRecord (sql,inserts,insertCounts,counts,table,record):
 #that generates them
 def generateInitialSale (sql,inserts,insertCounts,counts,fields):
     game = str(fields[('games','id')])
-    card = str(insertDictRecord(sql,inserts,insertCounts,counts,"creditcards",generateCreditCard()))
-    cust = str(insertDictRecord(sql,inserts,insertCounts,counts,"customers",generateCustomer(card)))
+    card = generateCreditCard()
+    insertHeader(inserts,insertCounts,counts,"creditcards",False)
+    for field in schema["creditcards"]:
+        inserts["creditcards"]+=card[field]
+        postInsert(sql,inserts,insertCounts,counts,"creditcards")
+    cust = str(insertDictRecord(sql,inserts,insertCounts,counts,"customers",generateCustomer(card["id"])))
     insertDictRecord(sql,inserts,insertCounts,counts,"sales",generateSale(cust,game))
 
 preloads = {"creditcards" : generateInitialSale,"customers" : generateInitialSale,"sales" : generateInitialSale }
@@ -195,6 +217,8 @@ def getFieldValue (fieldType,value):
         raise ConvertException("Unknown type "+fieldType)
 
 def convert (csvFileName, newSqlFileName, skipFirstLine=False):
+    #reset card numbers available
+    generateCreditCardNumber._generated={"0000000000000000" : True}
     if not os.path.exists(csvFileName):
         raise ConvertException("CSV file "+csvFileName+" could not be found!")
     if os.path.exists(newSqlFileName):
@@ -247,7 +271,10 @@ def convert (csvFileName, newSqlFileName, skipFirstLine=False):
                     continue
                 #replace semicolons with colons so file can be post processed
                 value=value.replace(";",",")
-                fieldType = types[column]
+                if (table,column) in types:
+                    fieldType = types[(table,column)]
+                else:
+                    fieldType = types[column]
                 fields[order[i]]=getFieldValue(fieldType,value)
                 #store id
                 if table not in inserts:
@@ -319,9 +346,12 @@ def writeCreateType (sqlFile,colType):
     else:
         raise WriteException("Unknown type "+colType)
 
-def writeColumn (sqlFile,col):
+def writeColumn (sqlFile,tableName,col):
     sql.write(col+" ")
-    writeCreateType(sql,types[col])
+    if (tableName,col) in types:
+        writeCreateType(sql,types[(tableName,col)])
+    else:
+        writeCreateType(sql,types[col])
 
 def writeInsert (sqlFile,columns,values,tableName):
     newSql.write("INSERT INTO "+tableName+
@@ -385,23 +415,30 @@ if __name__ == "__main__":
                 if table not in references and table not in dependencyOrder:
                     sql.write("CREATE TABLE "+table+" (\n   ")
                     #create key field
-                    writeColumn(sql,schema[table][0])
-                    sql.write(" PRIMARY KEY NOT NULL AUTO_INCREMENT,\n   ")
+                    writeColumn(sql,table,schema[table][0])
+                    if (table,schema[table][0]) in types:
+                        colType = types[(table,schema[table][0])]
+                    else:
+                        colType = types[schema[table][0]]
+                    if colType == "int":
+                        sql.write(" PRIMARY KEY NOT NULL AUTO_INCREMENT,\n   ")
+                    else:
+                        sql.write(" PRIMARY KEY NOT NULL,\n   ")
                     for column in schema[table][1:-1]:
-                        writeColumn(sql,column)
+                        writeColumn(sql,table,column)
                         sql.write(",\n   ")
-                    writeColumn(sql,schema[table][-1])
+                    writeColumn(sql,table,schema[table][-1])
                     sql.write("\n);\n\n")
             #for relationship tables
             for table in schema:
                 if table in references and table not in dependencyOrder:
                     sql.write("CREATE TABLE "+table+" (\n   ")
                     #write values first
-                    writeColumn(sql,schema[table][0])
+                    writeColumn(sql,table,schema[table][0])
                     sql.write(" NOT NULL")
                     for column in schema[table][1:]:
                         sql.write(",\n   ");
-                        writeColumn(sql,column)
+                        writeColumn(sql,table,column)
                         sql.write(" NOT NULL")
                     #now write foreign key constraints
                     for column in schema[table]:
@@ -416,12 +453,19 @@ if __name__ == "__main__":
             for table in dependencyOrder:
                 sql.write("CREATE TABLE "+table+" (\n   ")
                 #write values first
-                writeColumn(sql,schema[table][0])
-                sql.write(" PRIMARY KEY NOT NULL AUTO_INCREMENT")
+                writeColumn(sql,table,schema[table][0])
+                if (table,schema[table][0]) in types:
+                    colType = types[(table,schema[table][0])]
+                else:
+                    colType = types[schema[table][0]]
+                if colType == "int":
+                    sql.write(" PRIMARY KEY NOT NULL AUTO_INCREMENT")
+                else:
+                    sql.write(" PRIMARY KEY NOT NULL")
                 #now write foreign key constraints
                 for column in schema[table][1:]:
                     sql.write(",\n   ");
-                    writeColumn(sql,column)
+                    writeColumn(sql,table,column)
                     sql.write(" NOT NULL")
                 for column in schema[table][1:]:
                     if (table,column) in additionalDependency:

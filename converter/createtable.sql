@@ -1,24 +1,31 @@
-CREATE TABLE genres (
-   id INTEGER PRIMARY KEY NOT NULL AUTO_INCREMENT,
-   genre VARCHAR(200)
-);
-
-CREATE TABLE publishers (
-   id INTEGER PRIMARY KEY NOT NULL AUTO_INCREMENT,
-   publisher VARCHAR(200)
-);
-
 CREATE TABLE platforms (
    id INTEGER PRIMARY KEY NOT NULL AUTO_INCREMENT,
-   platform VARCHAR(200)
+   platform VARCHAR(50) NOT NULL
 );
 
 CREATE TABLE games (
    id INTEGER PRIMARY KEY NOT NULL AUTO_INCREMENT,
    rank INTEGER,
-   name VARCHAR(200),
-   year YEAR,
-   globalsales VARCHAR(200)
+   name VARCHAR(200) NOT NULL,
+   year YEAR NOT NULL,
+   globalsales VARCHAR(20)
+);
+
+CREATE TABLE genres (
+   id INTEGER PRIMARY KEY NOT NULL AUTO_INCREMENT,
+   genre VARCHAR(50) NOT NULL
+);
+
+CREATE TABLE publishers (
+   id INTEGER PRIMARY KEY NOT NULL AUTO_INCREMENT,
+   publisher VARCHAR(200) NOT NULL
+);
+
+CREATE TABLE platforms_of_games (
+   game_id INTEGER NOT NULL,
+   platform_id INTEGER NOT NULL,
+   CONSTRAINT fk_platforms_of_games_games FOREIGN KEY (`game_id`) REFERENCES `games`(id) ON DELETE CASCADE,
+   CONSTRAINT fk_platforms_of_games_platforms FOREIGN KEY (`platform_id`) REFERENCES `platforms`(id) ON DELETE CASCADE
 );
 
 CREATE TABLE publishers_of_games (
@@ -37,28 +44,21 @@ CREATE TABLE genres_of_games (
    CONSTRAINT fk_genres_of_games_genres FOREIGN KEY (`genre_id`) REFERENCES `genres`(id) ON DELETE CASCADE
 );
 
-CREATE TABLE platforms_of_games (
-   game_id INTEGER NOT NULL,
-   platform_id INTEGER NOT NULL,
-   CONSTRAINT fk_platforms_of_games_games FOREIGN KEY (`game_id`) REFERENCES `games`(id) ON DELETE CASCADE,
-   CONSTRAINT fk_platforms_of_games_platforms FOREIGN KEY (`platform_id`) REFERENCES `platforms`(id) ON DELETE CASCADE
-);
-
 CREATE TABLE creditcards (
-   id VARCHAR(200) PRIMARY KEY NOT NULL,
-   first_name VARCHAR(200) NOT NULL,
-   last_name VARCHAR(200) NOT NULL,
+   id VARCHAR(20) PRIMARY KEY NOT NULL,
+   first_name VARCHAR(50) NOT NULL,
+   last_name VARCHAR(50) NOT NULL,
    expiration DATE NOT NULL
 );
 
 CREATE TABLE customers (
    id INTEGER PRIMARY KEY NOT NULL AUTO_INCREMENT,
-   cc_id VARCHAR(200) NOT NULL,
-   first_name VARCHAR(200) NOT NULL,
-   last_name VARCHAR(200) NOT NULL,
+   cc_id VARCHAR(20) NOT NULL,
+   first_name VARCHAR(50) NOT NULL,
+   last_name VARCHAR(50) NOT NULL,
    address VARCHAR(200) NOT NULL,
-   email VARCHAR(200) NOT NULL,
-   password VARCHAR(200) NOT NULL,
+   email VARCHAR(50) NOT NULL,
+   password VARCHAR(20) NOT NULL,
    CONSTRAINT fk_customers_creditcards FOREIGN KEY (`cc_id`) REFERENCES `creditcards`(id) ON DELETE CASCADE
 );
 

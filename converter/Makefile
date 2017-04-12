@@ -5,3 +5,8 @@ all:
 	mysql < del.sql
 	mysql gamedb  < create_vgsales.sql
 	mysql gamedb < vgsales.sql
+
+data:
+	mysql < del.sql
+	mysql gamedb  < createtable.sql
+	mysql gamedb < data.sql
