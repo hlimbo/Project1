@@ -72,10 +72,10 @@ schema = {"games" : ["id","rank","name","year","globalsales"],
             "address", "email", "password"],
         "sales" : ["id","customer_id","salesdate","games"]}
 additionalDependency={("customers","cc_id") : "creditcards"}
-dupCheck=[('genres','genre'),('publishers','publisher'),('platforms','platform'),('game','name')]
+dupCheck=[('genres','genre'),('publishers','publisher'),('platforms','platform'),('games','name')]
 ignore=['NA_Sales','EU_Sales','JP_Sales','Other_Sales']
 #additionalInfo is field values that need to be tracked for dependencies
-additionalInfo=[('games','id')]
+additionalInfo=[] #[('games','id')]
 def findTable (column):
     for table, columns in schema.items():
         if column in columns:
@@ -281,14 +281,14 @@ def convert (csvFileName, newSqlFileName, skipFirstLine=False):
                     fields[(table,schema[table][0])]=counts[table]
                 if (table,column) in dupCheck:
                     if (order[i],fields[order[i]]) in uniques:
-                        fields[(table,schema[table][0])]=uniques[(order[i],fields[order[i]])]
-                        skipLine[table]=True
+                        skipLine[table]=(order[i],fields[order[i]])
                     else:
                         uniques[(order[i],fields[order[i]])]=fields[(table,schema[table][0])]
-                if skipLine[table]:
+                if skipLine[table]!=False:
                     #remove values currently stored for this row
                     if table in inserts:
                         clearInsert(inserts,insertCounts,table)
+                    fields[(table,schema[table][0])]=uniques[skipLine[table]]
                     i+=1
                     if i%len(order) == 0:
                         i=0
