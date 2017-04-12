@@ -96,6 +96,12 @@ public class GamesConsole {
 		System.out.println("pubgames, genregames, addpub, addgame, addcust, delcust, meta, query, logout\n");
 	}
 	
+	//TODO: List games by publisher name and genre name
+	//if genre name is not specified, use publisher name instead.
+	//if publisher name is not specified, use game name instead.
+	//otherwise, print out error message if neither are specified.
+	
+	//TODO: list games by publisher name or publisher id
 	private static void printGamesByPublisher(Connection conn, Scanner cmdline)
 	{
 		System.out.println("Enter publisher name to filter by: ");
@@ -136,6 +142,7 @@ public class GamesConsole {
 		}
 	}
 	
+	//TODO: List games by Genre name or genre id
 	private static void printGamesByGenre(Connection conn, Scanner cmdline)
 	{
 		System.out.println("Enter game genre to filter by: ");
@@ -175,7 +182,11 @@ public class GamesConsole {
 		}
 	}
 	
-	//todo prob temporarily hardcode fake rank year and global sales input for the game.
+	
+	//TODO: insert game by providing name and year and/or rank.
+	//insert game by providing name (mandatory) and year (optional)
+	//if year is not provided, game name will be inserted into the database without the year specified.
+	//if  rank is not provided, game name will be inserted into the database without the rank specified.
 	private static void addGame(Connection conn, Scanner cmdline) throws Exception
 	{
 		System.out.println("Enter name of game: ");
@@ -196,7 +207,6 @@ public class GamesConsole {
 		}
 	}
 	
-	//optional todo: to test
 	private static void addPublisher(Connection conn,Scanner cmdline) throws Exception
 	{
 		System.out.println("Enter name of publisher: ");
