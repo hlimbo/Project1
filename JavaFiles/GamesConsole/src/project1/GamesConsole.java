@@ -101,46 +101,73 @@ public class GamesConsole {
 	//if publisher name is not specified, use game name instead.
 	//otherwise, print out error message if neither are specified.
 	
-	//TODO: list games by publisher name or publisher id
-	private static void printGamesByPublisher(Connection conn, Scanner cmdline)
-	{
-		System.out.println("Enter publisher name to filter by: ");
-		String pubname = cmdline.nextLine();
-		if (pubname.trim().compareTo("")==0) 
+		private static void printGamesByPublisher(Connection conn, Scanner cmdline)
 		{
-			System.out.println("Publisher name cannot be empty.");
-		} 
-		else 
-		{
-			//print out games featuring a given publisher
-			//1. games 2. publishers 3. publishers_of_games
-			String searchPub = "SELECT id FROM publishers WHERE publisher = ?";
-			String searchGames = "SELECT game_id FROM publishers_of_games WHERE publisher_id = ?";
-			String listGames = "Select * FROM games WHERE id IN (" + searchGames + ")" + " ORDER BY games.name";
-			try {
-				PreparedStatement searchPubStatement = conn.prepareStatement(searchPub);
-				PreparedStatement listGamesStatement = conn.prepareStatement(listGames);
-				searchPubStatement.setString(1, pubname);
-				
-				ResultSet result = searchPubStatement.executeQuery();
-				int game_id = -1;
-				if(!result.next())
-				{
-					System.out.println("Cannot find publisher: " + pubname + " in the database");					
-				}
-				else //printout games from a given publisher existing in the database.
-				{
-					game_id = result.getInt(1);
-					listGamesStatement.setInt(1,game_id);
-					ResultSet gamesSet = listGamesStatement.executeQuery();
-					printResult(gamesSet);	
+			System.out.println("Enter publisher name or publisher id to filter by: ");
+			String input = cmdline.nextLine();
+			String pubname = "";
+			Integer pubid = -1;
+			
+			if (input.trim().compareTo("")==0) 
+			{
+				System.out.println("Publisher name or id cannot be empty.");
+			} 
+			else 
+			{
+				try{
+					pubid = Integer.parseInt(input);
+				}catch(NumberFormatException e){
+					pubname = input;
 				}
 				
-			} catch (SQLException error) {
-				printCause(error);
+				//print out games featuring a given publisher
+				//1. games 2. publishers 3. publishers_of_games
+				String searchPub = "SELECT id FROM publishers WHERE publisher = ?";
+				String searchGames = "SELECT game_id FROM publishers_of_games WHERE publisher_id = ?";
+				String listGames = "Select * FROM games WHERE id IN (" + searchGames + ")" + " ORDER BY games.name";
+				try {
+					
+					if(pubid == -1){
+						PreparedStatement searchPubStatement = conn.prepareStatement(searchPub);
+						PreparedStatement listGamesStatement = conn.prepareStatement(listGames);
+						searchPubStatement.setString(1, pubname);
+						ResultSet result = searchPubStatement.executeQuery();
+						
+						int game_id = -1;
+						if(!result.next())
+						{
+							System.out.println("Cannot find publisher: " + pubname + " in the database");					
+						}
+						else //printout games from a given publisher existing in the database.
+						{
+							game_id = result.getInt(1);
+							listGamesStatement.setInt(1,game_id);
+							ResultSet gamesSet = listGamesStatement.executeQuery();
+							printResult(gamesSet);	
+						}
+					}
+					else{
+						
+						String valsearchpub = "SELECT id FROM publishers WHERE id=?";
+						PreparedStatement validation = conn.prepareStatement(valsearchpub);
+						validation.setInt(1, pubid);
+						ResultSet result_val = validation.executeQuery();
+						
+						if(!result_val.next()){
+							System.out.println("Id you entered is invalid, it is not in database");
+						}else{
+							PreparedStatement listGameStatement = conn.prepareStatement(listGames);
+							listGameStatement.setInt(1, pubid);
+							ResultSet result = listGameStatement.executeQuery();
+							printResult(result);	
+						}
+					}
+					
+				} catch (SQLException error) {
+					printCause(error);
+				}
 			}
 		}
-	}
 	
 	//TODO: List games by Genre name or genre id
 	private static void printGamesByGenre(Connection conn, Scanner cmdline)
