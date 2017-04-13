@@ -92,7 +92,7 @@ Main Menu Commands: (help may also be pressed to see these commands)
 	Displays metadata.
 9. query
 	Example SELECT query: SELECT * FROM games;
-	Example INSERT query: INSERT INTO gamesINSERT INTO publishers (publisher) VALUES ('Dark Side');
+	Example INSERT query: INSERT INTO publishers (publisher) VALUES ('Dark Side');
 	Example DELETE query: DELETE FROM games WHERE id=3;
 	Example UPDATE query: UPDATE games SET name='Metroid Prime' WHERE id=2;
 10. logout
