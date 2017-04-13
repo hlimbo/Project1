@@ -23,29 +23,77 @@ Populate tables of the gamedb.
 
 JDBC Program in Eclipse:
 -------------------------------------------------------------------
-1. Right click on the GamesConsole Project folder under the Package Explorer.
-2. Click on Build Path -> Configure Build Path
-3. In Properties for GamesConsole Window, click on Libraries tab and select Add External Jars.
-4. Select mysql-connector-java-5.1.41-bin.jar
-5. Click open
-6. Click Apply in Properties for GamesConsole Window
-7. Click Ok to close Properties for GamesConsole Window
-8. Hit the green play button to compile and run the program
+1. Under File tab, select Open Projects From File System.
+2. Navigate to the JavaFiles folder within the folder that contains how_to_run.txt
+3. Click Next to import GamesConsole project
+4. Right click on the GamesConsole Project folder under the Package Explorer.
+5. Click on Build Path -> Configure Build Path
+6. In Properties for GamesConsole Window, click on Libraries tab and select Add External Jars.
+7. Select mysql-connector-java-5.1.41-bin.jar
+8. Click open
+9. Click Apply in Properties for GamesConsole Window
+10. Click Ok to close Properties for GamesConsole Window
+11. Hit the green play button to compile and run the program
+12. If project asks for a Main Type, select GamesConsole - project 1.
+
+And now you should see JDBC Program How to Operate
 
 JDBC Program in Command Line:
 -------------------------------------------------------------------
 cd to the directory containing this how_to_run.txt
-java -cp .:mysql-connector-java-5.1.41-bin.jar TODO
+type make into the command line to let it perform the compilation
+and execution of the program for you.
+	make
+And now you should see JDBC Program How to Operate.
 
-JDBC Program How to operate:
+Alternatively, you can type out the commands in that file yourself
+	javac JavaFiles/GamesConsole/src/project1/GamesConsole.java -d .
+	java -cp .:mysql-connector-java-5.1.41-bin.jar project1.GamesConsole
+
+JDBC Program How to Operate:
 ---------------------------------------------------------------------
+user is user
+password is password
+
+Login Menu:
+1. login
+Will ask for user and password. User is user while password is password.
+If the wrong user name or password is typed in, the login shall give
+you two more times to try before exiting the program.
+2. quit
+Exits the program.
+
+Main Menu Commands: (help may also be pressed to see these commands)
 1. pubgames
+	Prints all games by a given publisher name or publisher id
+	Example Input 1: Nintendo
+	Example Input 2: 3
 2. genregames
-3. addpub
-4. addgame
-5. addcust
-6. delcust
-7. meta
-8. query
-9. logout
-10. pubgenregames
+	Prints all games by a given genre or genre id
+	Example Input 1: Action
+	Example Input 2: 9
+3. pubgenregames
+	Prints all games by a given genre and/or publisher.
+	Example Input 1: Activision;Platform
+	Example Input 2: 505 Games
+	Example Input 3: Platform
+4. addpub
+	Example Input: New Gamers
+5. addgame
+	Example input: Money
+	Example input 2: Dark;5
+	Example input 3: Moonlight Sonata;1998;10
+6. addcust
+	Example credit card #: 9997831623784992
+	Example name in database: Ann Sims
+7. delcust
+	Delete customer by id.
+8. meta
+	Displays metadata.
+9. query
+	Example SELECT query: SELECT * FROM games;
+	Example INSERT query: INSERT INTO gamesINSERT INTO publishers (publisher) VALUES ('Dark Side');
+	Example DELETE query: DELETE FROM games WHERE id=3;
+	Example UPDATE query: UPDATE games SET name='Metroid Prime' WHERE id=2;
+10. logout
+	Brings you back to the Login Menu.

@@ -22,6 +22,10 @@ public class GamesConsole {
 				System.out.println(error.getMessage());
 				exit = true;
 				break;
+			case 1264:
+				System.out.println("Invalid year.");
+				exit = true;
+				break;
 			default:
 				Throwable t = error.getCause();
 				if (t==null) {
@@ -169,7 +173,7 @@ public class GamesConsole {
 							genrename = name;
 							genrename.trim();
 							int genre_id = s2.getInt(1);
-							String query = "SELECT * FROM games g, genres_of_games e WHERE g.id=e.game_id AND e.genre_id = ? ORDER BY g.name";
+							String query = "SELECT DISTINCT * FROM games g, genres_of_games e WHERE g.id=e.game_id AND e.genre_id = ? ORDER BY g.name";
 							PreparedStatement listGames = conn.prepareStatement(query);
 							listGames.setInt(1,genre_id);
 							ResultSet results = listGames.executeQuery();
@@ -182,7 +186,7 @@ public class GamesConsole {
 						pubname = name;
 						pubname.trim();
 						int pub_id = s1.getInt(1);
-						String query = "SELECT * FROM games g, publishers_of_games p WHERE g.id=p.game_id AND p.publisher_id = ? ORDER BY g.name";
+						String query = "SELECT DISTINCT * FROM games g, publishers_of_games p WHERE g.id=p.game_id AND p.publisher_id = ? ORDER BY g.name";
 						PreparedStatement listGames = conn.prepareStatement(query);
 						listGames.setInt(1,pub_id);
 						listGames.executeQuery();
@@ -202,7 +206,7 @@ public class GamesConsole {
 				genrename = contents[1];
 				pubname.trim();
 				genrename.trim();
-				String query = "SELECT id, rank, name, year, globalsales FROM games, publishers_of_games p NATURAL JOIN genres_of_games g WHERE games.id = p.game_id AND p.publisher_id = ? AND g.genre_id = ?";
+				String query = "SELECT DISTINCT id, rank, name, year, globalsales FROM games, publishers_of_games p NATURAL JOIN genres_of_games g WHERE games.id = p.game_id AND p.publisher_id = ? AND g.genre_id = ?";
 				
 				try
 				{
@@ -403,13 +407,15 @@ public class GamesConsole {
 		
 		String[] words = input.split(";");
 		
+		Year year_object = Year.now();
 		if(words.length == 1){
 			name = words[0];
 			
 			try {
-				String insert = "INSERT INTO games (name) VALUES (?)"; 
+				String insert = "INSERT INTO games (name,year) VALUES (?,?)"; 
 				PreparedStatement statement = conn.prepareStatement(insert);
 				statement.setString(1, name);
+				statement.setString(2, year_object.toString());
 				int result = statement.executeUpdate();
 				printRowChange(result,"updated");
 			} catch (SQLException error) {
@@ -419,9 +425,9 @@ public class GamesConsole {
 		}
 		else if(words.length == 2){
 			Integer rank1 = -1;
-			Year year_object = Year.now();
 			name = words[0];
 			year = words[1];
+			year_object = Year.now();
 			
 			
 			try{
@@ -443,14 +449,16 @@ public class GamesConsole {
 			}
 			if(rank1 == -1){
 				try {
-					String insert = "INSERT INTO games (name,year) VALUES (?,?)"; 
+					String insert = "INSERT INTO games (name,rank,year) VALUES (?,?,?)"; 
 					PreparedStatement statement = conn.prepareStatement(insert);
 					
 					
 					
 					
 					statement.setString(1,name);
-					statement.setString(2, year_object.toString());
+					//statement.setString(2, year_object.toString());
+					statement.setString(2, "");
+					statement.setString(3, year_object.toString());
 					
 					int result = statement.executeUpdate();
 					printRowChange(result,"updated");
@@ -476,15 +484,24 @@ public class GamesConsole {
 		}
 		else if(words.length == 3) {
 			
-			name = words[0];
-			year = words[1];
+			name = words[0].trim();
 			try
 			{
-				rank = Integer.parseInt(words[2]);
+				rank = Integer.parseInt(words[2].trim());
 			}
 			catch (NumberFormatException e)
 			{
 				System.out.println("Rank must be a number");
+				return;
+			}
+			try
+			{
+				year ="";
+				year += Integer.parseInt(words[1].trim());
+			}
+			catch (NumberFormatException e)
+			{
+				System.out.println("Year must be a number");
 				return;
 			}
 			
@@ -520,8 +537,9 @@ public class GamesConsole {
 		
 		try
 		{
-			String insert = "INSERT INTO publishers (name) VALUES (?)";
+			String insert = "INSERT INTO publishers (publisher) VALUES (?)";
 			PreparedStatement statement = conn.prepareStatement(insert);
+			statement.setString(1, "'"+name+"'");
 			int result = statement.executeUpdate();
 			printRowChange(result, "updated");
 		}
@@ -533,6 +551,8 @@ public class GamesConsole {
 	
 	private static void addCustomer(Connection conn, Scanner cmdline)
 	{
+		System.out.println("Type in the credit card number if it is known. Leave blank if not known.");
+		String cc_id = cmdline.nextLine().trim();
 		System.out.println("Enter the name of the Customer to be added.");
 		String name = cmdline.nextLine();
 		name=name.trim();
@@ -556,20 +576,42 @@ public class GamesConsole {
 		{
 			///Find creditcard holder's id given creditcard holder's first name and last name.
 			//Select id from creditcards where first_name="first" and last_name="last
-			String ccQuery = "SELECT id FROM creditcards WHERE first_name = ? and last_name = ?";
-			PreparedStatement ccStatement = conn.prepareStatement(ccQuery);
-			ccStatement.setString(1, fname);
-			ccStatement.setString(2, lname);
-			ResultSet resultIDSet = ccStatement.executeQuery();
-			
-			//if no credit card ids are associated with the first and last name provided.
-			if(!resultIDSet.next())
-			{
-				System.out.println("Cannot add " + fname + " " + lname + " into the database. Does not have a record in the creditcards table. ");
-				return;
+			String ccQuery = "SELECT id FROM creditcards WHERE ";
+			if (fname.trim().compareTo("")!=0) {
+				ccQuery+="first_name = ?";
 			}
+			if (lname.trim().compareTo("")!=0) {
+				if (fname.trim().compareTo("")!=0) {
+					ccQuery+="AND last_name = ?";
+				} else {
+					ccQuery+="last_name = ?";
+				}
+			}
+			if (cc_id.compareTo("")==0) {
+				PreparedStatement ccStatement = conn.prepareStatement(ccQuery);
+				ccStatement.setString(1, fname);
+				ccStatement.setString(2, lname);
+				ResultSet resultIDSet = ccStatement.executeQuery();
 			
-			String cc_id = resultIDSet.getString(1);
+				//if no credit card ids are associated with the first and last name provided.
+				if(!resultIDSet.next())
+				{
+					System.out.println("Cannot add " + fname + " " + lname + " into the database. Does not have a record in the creditcards table. ");
+					return;
+				}
+			
+				cc_id = resultIDSet.getString(1);
+			} else {
+				String ccIdQuery = "SELECT id FROM creditcards WHERE id=?";
+				PreparedStatement ccStatement = conn.prepareStatement(ccIdQuery);
+				ccStatement.setString(1, cc_id);
+				ResultSet resultIDSet = ccStatement.executeQuery();
+				if(!resultIDSet.next())
+				{
+					System.out.println("Cannot add " + fname + " " + lname + " into the database. Does not have a record in the creditcards table. ");
+					return;
+				}
+			}
 			//insert the customer into the database
 			String insertSQL = "INSERT INTO customers (first_name, last_name, cc_id, address, email, password) VALUES(?, ?, ?, ?, ?, ?)";	
 			PreparedStatement insertStatement = conn.prepareStatement(insertSQL);
@@ -608,13 +650,15 @@ public class GamesConsole {
 		System.out.println("Enter the id of the Customer to be deleted: ");
 		String id = cmdline.nextLine();
 		id=id.trim();
+
 		String del = " DELETE FROM customers WHERE customers.id="+id;
 		try {
 			Statement statement = conn.createStatement();
 			int result = statement.executeUpdate(del);
 			printRowChange(result,"deleted");
 		} catch (SQLException error) {
-			printCause(error);
+			//printCause(error);
+			System.out.println("Invalid customer id");
 		}
 	}
 	
