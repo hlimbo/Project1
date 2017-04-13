@@ -430,9 +430,17 @@ public class GamesConsole {
 				
 			}catch(DateTimeParseException e){
 				
-				rank1 = Integer.parseInt(year);
+				try
+				{
+					rank1 = Integer.parseInt(year);
+				}
+				catch(NumberFormatException n)
+				{
+					System.out.println("Rank and Year must be numbers");
+					return;
+				}
+				
 			}
-			
 			if(rank1 == -1){
 				try {
 					String insert = "INSERT INTO games (name,year) VALUES (?,?)"; 
@@ -470,7 +478,15 @@ public class GamesConsole {
 			
 			name = words[0];
 			year = words[1];
-			rank = Integer.parseInt(words[2]);
+			try
+			{
+				rank = Integer.parseInt(words[2]);
+			}
+			catch (NumberFormatException e)
+			{
+				System.out.println("Rank must be a number");
+				return;
+			}
 			
 			try {
 				String insert = "INSERT INTO games (name,year,rank) VALUES (?,?,?)"; 
