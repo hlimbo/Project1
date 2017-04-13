@@ -93,7 +93,7 @@ public class GamesConsole {
 	private static void displayConsoleCommands()
 	{
 		System.out.println("Known Console Commands:");
-		System.out.println("pubgames, genregames, addpub, addgame, addcust, delcust, meta, query, logout\n");
+		System.out.println("pubgames, genregames, pubgenregames, addpub, addgame, addcust, delcust, meta, query, logout\n");
 	}
 	
 	//TODO: List games by publisher name and genre name
@@ -105,13 +105,13 @@ public class GamesConsole {
 		System.out.println("Enter publisher name and/or genre name separate by semicolon (;) ");
 		String input = cmdline.nextLine();
 		
-		if(input.trim().isEmpty())
+		String[] contents = input.split(";");
+		
+		if(input.trim().isEmpty() || contents.length == 0)
 		{
 			System.out.println("Publisher name and genre name cannot be empty");
 			return;
 		}
-		
-		String[] contents = input.split(";");
 	
 		if(contents.length > 3)
 		{
@@ -123,24 +123,75 @@ public class GamesConsole {
 			String pubname = "";
 			String genrename = "";
 			
+			
+			//verify that given publisher name is in the publisher's table
+			String searchPub = "SELECT id FROM publishers WHERE publisher = ?";
+			
+			//verify that given genre name is in the genre's table
+			String searchGenre = "SELECT id FROM genres WHERE genre = ?";
+			
 			if(contents.length == 1)
 			{
 				name = contents[0];
+				
+				try
+				{
+					PreparedStatement pubStatement = conn.prepareStatement(searchPub);
+					PreparedStatement genreStatement = conn.prepareStatement(searchGenre);
+					pubStatement.setString(1, name);
+					genreStatement.setString(1, name);
+					
+					ResultSet s1 = pubStatement.executeQuery();
+					
+					//if name given cannot be found in the publisher's table, execute the query for the genre table
+					if(!s1.next())
+					{
+						ResultSet s2 = genreStatement.executeQuery();
+						
+						//if name given cannot be found in the genre's table
+						if(!s2.next())
+						{
+							System.out.println("Name: " + name + " was not found in the publishers and genres tables");
+							return;
+						}
+						else
+						{
+							genrename = name;
+							genrename.trim();
+							int genre_id = s2.getInt(1);
+							String query = "SELECT * FROM games g, genres_of_games e WHERE g.id=e.game_id AND e.genre_id = ? ORDER BY g.name";
+							PreparedStatement listGames = conn.prepareStatement(query);
+							listGames.setInt(1,genre_id);
+							ResultSet results = listGames.executeQuery();
+							printResult(results);
+							
+						}
+					}
+					else
+					{
+						pubname = name;
+						pubname.trim();
+						int pub_id = s1.getInt(1);
+						String query = "SELECT * FROM games g, publishers_of_games p WHERE g.id=p.game_id AND p.publisher_id = ? ORDER BY g.name";
+						PreparedStatement listGames = conn.prepareStatement(query);
+						listGames.setInt(1,pub_id);
+						listGames.executeQuery();
+						ResultSet results = listGames.executeQuery();
+						printResult(results);
+					}
+					
+				}
+				catch(SQLException e)
+				{
+					printCause(e);
+				}
 			}
 			else //if both publisher name and genre name are supplied, run query to filter games by publisher and genre name.
 			{
 				pubname = contents[0];
 				genrename = contents[1];
-				
-				//verify that given publisher name is in the publisher's table
-				String searchPub = "SELECT id FROM publishers WHERE publisher = ?";
-				
-				//verify that given genre name is in the genre's table
-				String searchGenre = "SELECT id FROM genres WHERE genre = ?";
-				
-//				String subquery = "SELECT game_id FROM genres_of_games NATURAL JOIN publishers_of_games WHERE genre_id = ? AND publisher_id = ?";				
-//				String query = "SELECT * FROM games WHERE id IN (" + subquery + ")" + " ORDER BY games.name";
-				
+				pubname.trim();
+				genrename.trim();
 				String query = "SELECT id, rank, name, year, globalsales FROM games, publishers_of_games p NATURAL JOIN genres_of_games g WHERE games.id = p.game_id AND p.publisher_id = ? AND g.genre_id = ?";
 				
 				try
