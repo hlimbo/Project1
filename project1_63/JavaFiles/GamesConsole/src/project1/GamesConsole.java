@@ -391,7 +391,7 @@ public class GamesConsole {
 	//if  rank is not provided, game name will be inserted into the database without the rank specified.
 	private static void addGame(Connection conn, Scanner cmdline)
 	{
-		System.out.println("Enter name of game OR Enter year and/or rank(Seperate the Game/Rank/Year by semicolons no spaces): ");
+		System.out.println("Enter name of game OR Enter year and/or rank(Seperate the Game/Year/Rank by semicolons no spaces): ");
 		
 		String input = cmdline.nextLine();
 		String name = "";
