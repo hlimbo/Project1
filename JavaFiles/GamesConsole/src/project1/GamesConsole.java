@@ -37,14 +37,22 @@ public class GamesConsole {
 		ResultSetMetaData meta = result.getMetaData();
 		for (int i=1;i<=meta.getColumnCount();++i) {
 			int type = meta.getColumnType(i);
+			String typeName = meta.getColumnTypeName(i);
 			String resString = "";
-			switch(type) {
-			case Types.INTEGER:
-				resString+=result.getInt(i);
+			switch(typeName.toUpperCase()) {
+			case "YEAR":
+				resString=result.getString(i).substring(0,4);
 				break;
-			default:
-				resString=result.getString(i);
-				break;
+			}
+			if (resString == "") {
+				switch(type) {
+				case Types.INTEGER:
+					resString+=result.getInt(i);
+					break;
+				default:
+					resString=result.getString(i);
+					break;
+				}
 			}
 			System.out.print(resString);
 			if (i<meta.getColumnCount()) {
