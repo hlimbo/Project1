@@ -141,15 +141,39 @@ public class GamesConsole {
 //				String subquery = "SELECT game_id FROM genres_of_games NATURAL JOIN publishers_of_games WHERE genre_id = ? AND publisher_id = ?";				
 //				String query = "SELECT * FROM games WHERE id IN (" + subquery + ")" + " ORDER BY games.name";
 				
-				String query = "SELECT id, rank, name, year, globalsales FROM games, publisher_of_games p NATURAL JOIN genres_of_games g WHERE games.id = p.game_id AND p.publisher_id = ? AND g.genre_id = ?";
+				String query = "SELECT id, rank, name, year, globalsales FROM games, publishers_of_games p NATURAL JOIN genres_of_games g WHERE games.id = p.game_id AND p.publisher_id = ? AND g.genre_id = ?";
 				
 				try
 				{
 					
 					PreparedStatement pubStatement = conn.prepareStatement(searchPub);
 					PreparedStatement genreStatement = conn.prepareStatement(searchGenre);
+					pubStatement.setString(1, pubname);
+					genreStatement.setString(1, genrename);
+					
+					ResultSet pubResult = pubStatement.executeQuery();
+					if(!pubResult.next())
+					{
+						System.out.println("Cannot find Publisher: " + pubname + " in the database.");
+						return;
+					}
+					
+					ResultSet genreResult = genreStatement.executeQuery();
+					if(!genreResult.next())
+					{
+						System.out.println("Cannot find Genre: " + genrename + " in the database.");
+						return;
+					}
+					
+					int pub_id = pubResult.getInt(1);
+					int genre_id = genreResult.getInt(1);
 					
 					PreparedStatement statement = conn.prepareStatement(query);
+					statement.setInt(1, pub_id);
+					statement.setInt(2, genre_id);
+					ResultSet searchResults = statement.executeQuery();
+					printResult(searchResults);
+					
 				}
 				catch(SQLException e)
 				{
@@ -532,6 +556,7 @@ public class GamesConsole {
 	private static final String quit = "quit";
 	private static final String logout = "logout";
 	private static final String help = "help";
+	private static final String pubgenregames = "pubgenregames";
 
 	public static void main(String[] args) throws Exception {
 		Class.forName("com.mysql.jdbc.Driver").newInstance();
@@ -622,6 +647,8 @@ public class GamesConsole {
 					consoleMenuRunning = false;
 					loginMenuRunning = true;
 					break;
+				case pubgenregames:
+					GamesConsole.printGamesByPublisherAndOrGenre(loginConnection, cmdline);
 				default:
 					break;
 				}
