@@ -231,42 +231,69 @@ public class GamesConsole {
 	//TODO: List games by Genre name or genre id
 	private static void printGamesByGenre(Connection conn, Scanner cmdline)
 	{
-		System.out.println("Enter game genre to filter by: ");
-		String name = cmdline.nextLine();
-		if(name.isEmpty())
+		System.out.println("Enter game genre or genre id to filter by: ");
+		String input = cmdline.nextLine();
+		String genrename = "";
+		Integer genreid = -1;
+		
+		if(input.trim().compareTo("")==0)
 		{
-			System.out.println("Genre name cannot be empty");			
+			System.out.println("Input Cannot Be Empty.");			
+		}else{
+			
+			try{
+				genreid = Integer.parseInt(input);
+			}catch(NumberFormatException e){
+				genrename = input;
+			}
 		}
-		else
-		{
+		
 			String searchGenre = "SELECT id FROM genres WHERE genre = ?";
 			String searchGames = "SELECT game_id FROM genres_of_games WHERE genre_id = ?";
 			String listGames = "Select * FROM games WHERE id IN (" + searchGames + ")" + " ORDER BY games.name";
 			
 			try {
-				PreparedStatement searchGenreStatement = conn.prepareStatement(searchGenre);
-				PreparedStatement listGamesStatement = conn.prepareStatement(listGames);
-				searchGenreStatement.setString(1, name);
 				
-				ResultSet result = searchGenreStatement.executeQuery();
-				int game_id = -1;
-				if(!result.next())
-				{
-					System.out.println("Cannot find genre: " + name + " in the database");					
-				}
-				else //printout games from a given genre existing in the database.
-				{
-					game_id = result.getInt(1);
-					listGamesStatement.setInt(1,game_id);
-					ResultSet gamesSet = listGamesStatement.executeQuery();
-					printResult(gamesSet);	
-				}
+				if(genreid == -1){
+					PreparedStatement searchGenreStatement = conn.prepareStatement(searchGenre);
+					PreparedStatement listGamesStatement = conn.prepareStatement(listGames);
+					searchGenreStatement.setString(1, genrename);
+					
+					ResultSet result = searchGenreStatement.executeQuery();
+					int game_id = -1;
+					if(!result.next())
+					{
+						System.out.println("Cannot find genre: " + genrename + " in the database");					
+					}
 				
+					else //printout games from a given genre existing in the database.
+					{
+						game_id = result.getInt(1);
+						listGamesStatement.setInt(1,game_id);
+						ResultSet gamesSet = listGamesStatement.executeQuery();
+						printResult(gamesSet);	
+					}
+				}else{
+					
+					String valsearchpub = "SELECT id FROM publishers WHERE id=?";
+					PreparedStatement validation = conn.prepareStatement(valsearchpub);
+					validation.setInt(1, genreid);
+					ResultSet result_val = validation.executeQuery();
+					
+					if(!result_val.next()){
+						System.out.println("Id you entered is invalid, it is not in database");
+					}else{
+						PreparedStatement listGameStatement = conn.prepareStatement(listGames);
+						listGameStatement.setInt(1, genreid);
+						ResultSet result = listGameStatement.executeQuery();
+						printResult(result);	
+					}
+				}
 			} catch (SQLException error) {
 				printCause(error);
 			}
 		}
-	}
+	
 	
 	
 	//TODO: insert game by providing name and year and/or rank.
