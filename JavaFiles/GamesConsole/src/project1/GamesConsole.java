@@ -377,22 +377,80 @@ public class GamesConsole {
 	//if  rank is not provided, game name will be inserted into the database without the rank specified.
 	private static void addGame(Connection conn, Scanner cmdline)
 	{
-		System.out.println("Enter name of game: ");
-		String name = cmdline.nextLine();
-		name = name.trim();
-		if (name.compareTo("")==0) {
+		System.out.println("Enter name of game OR Enter year and/or rank(Seperate the Game/Rank/Year by semicolons): ");
+		
+		
+		String input = cmdline.nextLine();
+		String name = "";
+		String year = "";
+		Integer rank = -1;
+		
+		
+		input = input.trim();
+		if (input.compareTo("")==0) {
 			System.out.println("game name can not be empty.");
 			return;
-		} 
-		try {
-			String insert = "INSERT INTO games (name) VALUES (?)"; 
-			PreparedStatement statement = conn.prepareStatement(insert);
-			statement.setString(1, name);
-			int result = statement.executeUpdate();
-			printRowChange(result,"updated");
-		} catch (SQLException error) {
-			printCause(error);
 		}
+		
+		String[] words = input.split(";");
+		
+		if(words.length == 1){
+			name = words[0];
+			
+			try {
+				String insert = "INSERT INTO games (name) VALUES (?)"; 
+				PreparedStatement statement = conn.prepareStatement(insert);
+				statement.setString(1, name);
+				int result = statement.executeUpdate();
+				printRowChange(result,"updated");
+			} catch (SQLException error) {
+				printCause(error);
+			}
+		
+		}
+		else if(words.length == 2){
+			name = words[0];
+			year = words[1];
+			
+			try {
+				String insert = "INSERT INTO games (name,year) VALUES (?,?)"; 
+				PreparedStatement statement = conn.prepareStatement(insert);
+				
+				
+				
+				statement.setString(1,name);
+				statement.setString(2, year);
+				
+				int result = statement.executeUpdate();
+				printRowChange(result,"updated");
+			} catch (SQLException error) {
+				printCause(error);
+			}
+			
+		}
+		else if(words.length == 3) {
+			
+			name = words[0];
+			year = words[1];
+			rank = Integer.parseInt(words[2]);
+			
+			try {
+				String insert = "INSERT INTO games (name,year,rank) VALUES (?,?,?)"; 
+				PreparedStatement statement = conn.prepareStatement(insert);
+				
+				
+				statement.setString(1,name);
+				statement.setString(2, year);
+				statement.setInt(3, rank);
+				
+				int result = statement.executeUpdate();
+				printRowChange(result,"updated");
+			} catch (SQLException error) {
+				printCause(error);
+			}
+			
+		}
+			
 	}
 	
 	private static void addPublisher(Connection conn,Scanner cmdline)
