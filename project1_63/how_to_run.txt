@@ -48,3 +48,4 @@ JDBC Program How to operate:
 7. meta
 8. query
 9. logout
+10. pubgenregames
