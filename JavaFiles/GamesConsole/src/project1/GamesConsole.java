@@ -100,74 +100,133 @@ public class GamesConsole {
 	//if genre name is not specified, use publisher name instead.
 	//if publisher name is not specified, use game name instead.
 	//otherwise, print out error message if neither are specified.
-	
-		private static void printGamesByPublisher(Connection conn, Scanner cmdline)
+	private static void printGamesByPublisherAndOrGenre(Connection conn, Scanner cmdline)
+	{
+		System.out.println("Enter publisher name and/or genre name separate by semicolon (;) ");
+		String input = cmdline.nextLine();
+		
+		if(input.trim().isEmpty())
 		{
-			System.out.println("Enter publisher name or publisher id to filter by: ");
-			String input = cmdline.nextLine();
+			System.out.println("Publisher name and genre name cannot be empty");
+			return;
+		}
+		
+		String[] contents = input.split(";");
+	
+		if(contents.length > 3)
+		{
+			System.out.println("Too many arguments passed");
+		}
+		else
+		{
+			String name = "";
 			String pubname = "";
-			Integer pubid = -1;
+			String genrename = "";
 			
-			if (input.trim().compareTo("")==0) 
+			if(contents.length == 1)
 			{
-				System.out.println("Publisher name or id cannot be empty.");
-			} 
-			else 
+				name = contents[0];
+			}
+			else //if both publisher name and genre name are supplied, run query to filter games by publisher and genre name.
 			{
-				try{
-					pubid = Integer.parseInt(input);
-				}catch(NumberFormatException e){
-					pubname = input;
-				}
+				pubname = contents[0];
+				genrename = contents[1];
 				
-				//print out games featuring a given publisher
-				//1. games 2. publishers 3. publishers_of_games
+				//verify that given publisher name is in the publisher's table
 				String searchPub = "SELECT id FROM publishers WHERE publisher = ?";
-				String searchGames = "SELECT game_id FROM publishers_of_games WHERE publisher_id = ?";
-				String listGames = "Select * FROM games WHERE id IN (" + searchGames + ")" + " ORDER BY games.name";
-				try {
+				
+				//verify that given genre name is in the genre's table
+				String searchGenre = "SELECT id FROM genres WHERE genre = ?";
+				
+//				String subquery = "SELECT game_id FROM genres_of_games NATURAL JOIN publishers_of_games WHERE genre_id = ? AND publisher_id = ?";				
+//				String query = "SELECT * FROM games WHERE id IN (" + subquery + ")" + " ORDER BY games.name";
+				
+				String query = "SELECT id, rank, name, year, globalsales FROM games, publisher_of_games p NATURAL JOIN genres_of_games g WHERE games.id = p.game_id AND p.publisher_id = ? AND g.genre_id = ?";
+				
+				try
+				{
 					
-					if(pubid == -1){
-						PreparedStatement searchPubStatement = conn.prepareStatement(searchPub);
-						PreparedStatement listGamesStatement = conn.prepareStatement(listGames);
-						searchPubStatement.setString(1, pubname);
-						ResultSet result = searchPubStatement.executeQuery();
-						
-						int game_id = -1;
-						if(!result.next())
-						{
-							System.out.println("Cannot find publisher: " + pubname + " in the database");					
-						}
-						else //printout games from a given publisher existing in the database.
-						{
-							game_id = result.getInt(1);
-							listGamesStatement.setInt(1,game_id);
-							ResultSet gamesSet = listGamesStatement.executeQuery();
-							printResult(gamesSet);	
-						}
-					}
-					else{
-						
-						String valsearchpub = "SELECT id FROM publishers WHERE id=?";
-						PreparedStatement validation = conn.prepareStatement(valsearchpub);
-						validation.setInt(1, pubid);
-						ResultSet result_val = validation.executeQuery();
-						
-						if(!result_val.next()){
-							System.out.println("Id you entered is invalid, it is not in database");
-						}else{
-							PreparedStatement listGameStatement = conn.prepareStatement(listGames);
-							listGameStatement.setInt(1, pubid);
-							ResultSet result = listGameStatement.executeQuery();
-							printResult(result);	
-						}
-					}
+					PreparedStatement pubStatement = conn.prepareStatement(searchPub);
+					PreparedStatement genreStatement = conn.prepareStatement(searchGenre);
 					
-				} catch (SQLException error) {
-					printCause(error);
+					PreparedStatement statement = conn.prepareStatement(query);
+				}
+				catch(SQLException e)
+				{
+					printCause(e);
 				}
 			}
+			
 		}
+	}
+	
+	private static void printGamesByPublisher(Connection conn, Scanner cmdline)
+	{
+		System.out.println("Enter publisher name or publisher id to filter by: ");
+		String input = cmdline.nextLine();
+		String pubname = "";
+		Integer pubid = -1;
+		
+		if (input.trim().compareTo("")==0) 
+		{
+			System.out.println("Publisher name or id cannot be empty.");
+		} 
+		else 
+		{
+			try{
+				pubid = Integer.parseInt(input);
+			}catch(NumberFormatException e){
+				pubname = input;
+			}
+			
+			//print out games featuring a given publisher
+			//1. games 2. publishers 3. publishers_of_games
+			String searchPub = "SELECT id FROM publishers WHERE publisher = ?";
+			String searchGames = "SELECT game_id FROM publishers_of_games WHERE publisher_id = ?";
+			String listGames = "Select * FROM games WHERE id IN (" + searchGames + ")" + " ORDER BY games.name";
+			try {
+				
+				if(pubid == -1){
+					PreparedStatement searchPubStatement = conn.prepareStatement(searchPub);
+					PreparedStatement listGamesStatement = conn.prepareStatement(listGames);
+					searchPubStatement.setString(1, pubname);
+					ResultSet result = searchPubStatement.executeQuery();
+					
+					int game_id = -1;
+					if(!result.next())
+					{
+						System.out.println("Cannot find publisher: " + pubname + " in the database");					
+					}
+					else //printout games from a given publisher existing in the database.
+					{
+						game_id = result.getInt(1);
+						listGamesStatement.setInt(1,game_id);
+						ResultSet gamesSet = listGamesStatement.executeQuery();
+						printResult(gamesSet);	
+					}
+				}
+				else{
+					
+					String valsearchpub = "SELECT id FROM publishers WHERE id=?";
+					PreparedStatement validation = conn.prepareStatement(valsearchpub);
+					validation.setInt(1, pubid);
+					ResultSet result_val = validation.executeQuery();
+					
+					if(!result_val.next()){
+						System.out.println("Id you entered is invalid, it is not in database");
+					}else{
+						PreparedStatement listGameStatement = conn.prepareStatement(listGames);
+						listGameStatement.setInt(1, pubid);
+						ResultSet result = listGameStatement.executeQuery();
+						printResult(result);	
+					}
+				}
+				
+			} catch (SQLException error) {
+				printCause(error);
+			}
+		}
+	}
 	
 	//TODO: List games by Genre name or genre id
 	private static void printGamesByGenre(Connection conn, Scanner cmdline)
@@ -502,6 +561,7 @@ public class GamesConsole {
 			{
 				System.out.print("Enter your command (type 'help' to display known commands): ");
 				inp = cmdline.nextLine();
+				inp = inp.trim();
 				switch(inp)
 				{
 				case pubgames:
