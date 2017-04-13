@@ -2,6 +2,8 @@ package project1;
 
 import java.util.Scanner;
 import java.sql.*;
+import java.time.Year;
+import java.time.format.DateTimeParseException;
 
 public class GamesConsole {
 	final static String DATABASE = "gamedb";
@@ -326,8 +328,7 @@ public class GamesConsole {
 	//if  rank is not provided, game name will be inserted into the database without the rank specified.
 	private static void addGame(Connection conn, Scanner cmdline)
 	{
-		System.out.println("Enter name of game OR Enter year and/or rank(Seperate the Game/Rank/Year by semicolons): ");
-		
+		System.out.println("Enter name of game OR Enter year and/or rank(Seperate the Game/Rank/Year by semicolons no spaces): ");
 		
 		String input = cmdline.nextLine();
 		String name = "";
@@ -358,24 +359,53 @@ public class GamesConsole {
 		
 		}
 		else if(words.length == 2){
+			Integer rank1 = -1;
+			Year year_object = Year.now();
 			name = words[0];
 			year = words[1];
 			
-			try {
-				String insert = "INSERT INTO games (name,year) VALUES (?,?)"; 
-				PreparedStatement statement = conn.prepareStatement(insert);
+			
+			try{
 				
+				year_object = Year.parse(year);
 				
+			}catch(DateTimeParseException e){
 				
-				statement.setString(1,name);
-				statement.setString(2, year);
-				
-				int result = statement.executeUpdate();
-				printRowChange(result,"updated");
-			} catch (SQLException error) {
-				printCause(error);
+				rank1 = Integer.parseInt(year);
 			}
 			
+			if(rank1 == -1){
+				try {
+					String insert = "INSERT INTO games (name,year) VALUES (?,?)"; 
+					PreparedStatement statement = conn.prepareStatement(insert);
+					
+					
+					
+					
+					statement.setString(1,name);
+					statement.setString(2, year_object.toString());
+					
+					int result = statement.executeUpdate();
+					printRowChange(result,"updated");
+				} catch (SQLException error) {
+					printCause(error);
+				}
+			}else{
+				try {
+					String insert = "INSERT INTO games (name,rank,year) VALUES (?,?,?)"; 
+					PreparedStatement statement = conn.prepareStatement(insert);
+					
+					statement.setString(1,name);
+					statement.setInt(2, rank1);
+					statement.setString(3, year_object.toString());
+					
+					
+					int result = statement.executeUpdate();
+					printRowChange(result,"updated");
+				} catch (SQLException error) {
+					printCause(error);
+				}
+			}
 		}
 		else if(words.length == 3) {
 			
