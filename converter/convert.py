@@ -59,7 +59,7 @@ class WriteException (Exception):
 # creditcards -> creditcards
 
 #schema = {tableName : [columnName]}
-schema = {"games" : ["id","rank","name","year","globalsales"], 
+schema = {"games" : ["id","rank","name","year","globalsales","price"], 
         "genres" : ["id","genre"],
         "genres_of_games" : ["games","genres"],
         "publishers" : ["id","publisher"],
@@ -76,6 +76,21 @@ dupCheck=[('genres','genre'),('publishers','publisher'),('platforms','platform')
 ignore=['NA_Sales','EU_Sales','JP_Sales','Other_Sales']
 #additionalInfo is field values that need to be tracked for dependencies
 additionalInfo=[] #[('games','id')]
+
+def generatePrice (sql,inserts,insertCounts,counts,table):
+    randPrice = str(random.randint(0,6))
+    if randPrice=="0":
+        randPrice=str(random.randint(0,9))
+    else:
+        randPrice+=str(random.randint(0,9))
+    randPrice+="."+str(random.randint(0,99))
+    inserts[table]+=randPrice
+    postInsert(sql,inserts,insertCounts,counts,table)
+    return randPrice
+
+#randomGenerate is field values that need to be randomly generated
+randomGenerate={('games','price') : generatePrice}
+
 def findTable (column):
     for table, columns in schema.items():
         if column in columns:
@@ -114,6 +129,7 @@ types["year"]="year"
 types["expiration"]="date"
 types["salesdate"]="date"
 types["id"]="int"
+types["price"]="int"
 types[("creditcards","id")]="str"
 for table in references:
     for i in range(0,len(schema[table])):
@@ -301,6 +317,12 @@ def convert (csvFileName, newSqlFileName, skipFirstLine=False):
                 i+=1
                 if i%len(order) == 0:
                     i=0
+            #process randoms
+            table = order[i][0]
+            column = order[i][1]
+            for gen in randomGenerate:
+                if (gen[0] in inserts):
+                    fields[gen] = randomGenerate[gen](sql,inserts,insertCounts,counts,table)
             #handle relationships now that entities are assumed to be processed
             for child,parents in references.items():
                 if child in preloads:
